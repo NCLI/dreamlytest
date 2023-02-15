@@ -1,0 +1,21 @@
+lib/
+out/
+__pycache__/
+
+# LaTeX
+_minted-main/
+build/
+auto/
+main.pdf
+
+# Futhark Python builds
+src/quthark/*.py
+
+src/quthark/backend
+
+# Futhark compiled files
+*.c
+*.h
+*.json
+*.o
+*.so
