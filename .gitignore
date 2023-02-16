@@ -15,6 +15,7 @@ src/quthark/backend
 
 # Futhark compiled files
 *.c
+*.pyc
 *.h
 *.json
 *.o

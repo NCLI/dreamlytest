@@ -37,7 +37,7 @@ class Driver(models.Model):
         on_delete=models.CASCADE,
         related_name='driver'
     )
-    is_active = models.BooleanField(default=False)
+    is_available = models.BooleanField(default=False)
     latitude = models.FloatField()
     longitude = models.FloatField()
     license_number = models.CharField(max_length=50)

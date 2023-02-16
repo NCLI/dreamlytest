@@ -1,4 +1,3 @@
-
 {
   description = "Flake to manage python workspace";
 
@@ -20,14 +19,16 @@
             pkgs.futhark
             (pkgs.${python}.withPackages
               (ps: with ps; [
-		pip
-		black
+                pip
+                black
                 pyflakes
-		psycopg2
+                psycopg2
               ]))
+	      pkgs.gdal
+	      pkgs.geos
               pkgs.nodePackages.prettier
               pkgs.docker
-	      pkgs.pyright
+              pkgs.pyright
           ];
         };
       # Customize ends

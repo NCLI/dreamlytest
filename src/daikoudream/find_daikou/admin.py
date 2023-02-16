@@ -11,7 +11,7 @@ class CarAdmin(admin.ModelAdmin):
     list_display = ('make', 'model', 'year', 'customer')
 
 class DriverAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_active', 'latitude', 'longitude', 'license_number', 'bank_account_info')
+    list_display = ('user', 'is_available', 'latitude', 'longitude', 'license_number', 'bank_account_info')
 
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('customer', 'driver', 'car', 'pickup_time', 'completed')

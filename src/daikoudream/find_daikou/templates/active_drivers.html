@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/ol@7.2.2/dist/ol.js"></script>
+{% endblock %}
+
+{% block content %}
+<h1>Active Drivers Map</h1>
+{% load static %}
+<div id="map" style="width: 800px; height: 600px;"></div>
+<script type="text/javascript">
+    // Create a vector source for the active drivers
+    var drivers = new ol.source.Vector({
+        url: '{% url "driverlist" %}',
+        format: new ol.format.GeoJSON()
+    });
+
+    // Get the user's location using the Geolocation API
+    navigator.geolocation.getCurrentPosition(function(position) {
+        var userLocation = ol.proj.fromLonLat([position.coords.longitude, position.coords.latitude]);
+        // Create a vector source for the user location
+        var userLocationSource = new ol.source.Vector({
+            features: [
+                new ol.Feature({
+                    geometry: new ol.geom.Point(userLocation)
+                })
+            ]
+        });
+
+        // Add the user location and driver markers to the map
+        var map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                new ol.layer.Vector({
+                    source: drivers,
+                    // Define the style for the driver markers
+                    style: new ol.style.Style({
+                      image: new ol.style.Circle({
+                        radius: 4,
+                        fill: new ol.style.Fill({color: 'lightgreen'}),
+                        stroke: new ol.style.Stroke({color: 'white', width: 2})
+                      })
+                    })
+                }),
+                new ol.layer.Vector({
+                    source: userLocationSource,
+                    // Define the style for the user location marker
+                    style: new ol.style.Style({
+                        image: new ol.style.Circle({
+                            radius: 6,
+                            fill: new ol.style.Fill({color: 'blue'}),
+                            stroke: new ol.style.Stroke({color: 'white', width: 2})
+                        })
+                    })
+                })
+            ],
+            view: new ol.View({
+                center: userLocation,
+                zoom: 10
+            })
+        });
+    });
+</script>
+{% endblock %}
