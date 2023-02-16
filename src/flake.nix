@@ -1,3 +1,4 @@
+
 {
   description = "Flake to manage python workspace";
 
@@ -16,11 +17,17 @@
       devShell = pkgs:
         pkgs.mkShell {
           buildInputs = [
+            pkgs.futhark
             (pkgs.${python}.withPackages
               (ps: with ps; [
-                pyflakes
+		pip
 		black
+                pyflakes
+		psycopg2
               ]))
+              pkgs.nodePackages.prettier
+              pkgs.docker
+	      pkgs.pyright
           ];
         };
       # Customize ends
