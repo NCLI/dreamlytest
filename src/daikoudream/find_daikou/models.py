@@ -4,8 +4,8 @@ from django.contrib.auth.models import AbstractUser
 class CustomUser(AbstractUser):
     """ A custom user model to extend the default Django user model. """
 
-    is_driver = models.BooleanField(default=False)
-    is_customer = models.BooleanField(default=False)
+    # is_driver = models.BooleanField(default=False)
+    # is_customer = models.BooleanField(default=False)
 
 class Customer(models.Model):
     """ A model to represent a customer. """

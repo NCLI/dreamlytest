@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import CustomUser, Customer, Car, Driver, Order
 
 class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'is_staff', 'is_driver', 'is_customer')
+    list_display = ('username', 'email', 'is_staff')
 
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('user', 'saved_payment_info')

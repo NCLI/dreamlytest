@@ -16,7 +16,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from django.contrib.auth.views import LoginView, LogoutView
+
+from find_daikou.views import register
+
 urlpatterns = [
-    path('find_daikou/', include('find_daikou.urls')),
+    path('dashboard/', include('find_daikou.urls')),
+    path('register/', register, name='register'),
+    path('login/', LoginView.as_view(template_name='login.html'), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('admin/', admin.site.urls),
 ]

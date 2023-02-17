@@ -64,4 +64,13 @@
         });
     });
 </script>
+{% if buttons %}
+<div class="btn-group" role="group" aria-label="Basic example">
+  {% for button in buttons %}
+  <a href="{{ button.url }}" class="btn btn-primary" {% if button.disabled %}disabled{% endif %}>{{ button.label }}</a>
+  {% endfor %}
+</div>
+{% else %}
+<p>No buttons available</p>
+{% endif %}
 {% endblock %}

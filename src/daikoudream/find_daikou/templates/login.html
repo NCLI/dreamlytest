@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Login</h1>
+
+<form method="post">
+  {% csrf_token %}
+  <div>
+    <label for="username">Username:</label>
+    <input type="text" name="username" required>
+  </div>
+  <div>
+    <label for="password">Password:</label>
+    <input type="password" name="password" required>
+  </div>
+  <div>
+    <button type="submit">Login</button>
+  </div>
+</form>
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+  {% for error in form.non_field_errors %}
+  {{ error }}
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
