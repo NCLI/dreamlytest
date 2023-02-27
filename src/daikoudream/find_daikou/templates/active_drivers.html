@@ -9,6 +9,7 @@
 {% load static %}
 <div id="map" style="width: 800px; height: 600px;"></div>
 <script type="text/javascript">
+    var departure, arrival;
     // Create a vector source for the active drivers
     var drivers = new ol.source.Vector({
         url: '{% url "driverlist" %}',
@@ -62,7 +63,54 @@
                 zoom: 10
             })
         });
-    });
+        // Handle the click event on the map to set the departure and arrival points
+        {% if is_customer %}
+        map.on('singleclick', function(event) {
+          var coordinate = event.coordinate;
+          var lonLat = ol.proj.toLonLat(coordinate);
+          var feature = new ol.Feature({
+            geometry: new ol.geom.Point(coordinate)
+          });
+          if (!departure) {
+            departure = lonLat;
+            feature.setStyle(new ol.style.Style({
+              image: new ol.style.Circle({
+                radius: 6,
+                fill: new ol.style.Fill({color: 'white'}),
+                stroke: new ol.style.Stroke({color: 'green', width: 2})
+              })
+            }));
+          } else if (!arrival) {
+            arrival = lonLat;
+            feature.setStyle(new ol.style.Style({
+              image: new ol.style.Circle({
+                radius: 6,
+                fill: new ol.style.Fill({color: 'white'}),
+                stroke: new ol.style.Stroke({color: 'red', width: 2})
+              })
+            }));
+          } else {
+            // Show pop-up to confirm selection
+            if (confirm("Confirm selection of departure: " + departure + " and arrival: " + arrival + "?")) {
+              // Send coordinates to call_driver
+              window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival;
+            } else {
+              // Unset variables
+              departure = null;
+              arrival = null;
+              feature.setStyle(defaultStyle);
+            }
+          }
+          var vectorSource = new ol.source.Vector({
+            features: [feature]
+          });
+          var vectorLayer = new ol.layer.Vector({
+            source: vectorSource
+          });
+          map.addLayer(vectorLayer);
+        });
+        {% endif %}
+    });    // Handle the click event on the "Call driver" button
 </script>
 {% if buttons %}
 <div class="btn-group" role="group" aria-label="Basic example">

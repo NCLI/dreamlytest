@@ -51,16 +51,17 @@ def index(request):
 
         # Set button labels and URLs
         if is_customer:
-            call_driver_url = '/call_driver'
-            call_driver_label = 'Call driver'
-            if request.user.customer.orders.filter(completed=False).exists():
-                call_driver_url = '/cancel_driver'
-                call_driver_label = 'Cancel driver'
             buttons = [
-                {'url': call_driver_url, 'label': call_driver_label},
                 {'url': '/history', 'label': 'See history'},
                 {'url': '/update_info', 'label': 'Update information'},
             ]
+            if request.user.customer.orders.filter(completed=False).exists():
+                buttons.append(
+                    {
+                        "url": '/cancel_driver',
+                        "label": 'Cancel driver'
+                    }
+                )
         elif is_driver:
             start_driving_url = '/start_driving'
             start_driving_label = 'Start driving'
@@ -81,4 +82,24 @@ def index(request):
             {'url': '/login', 'label': 'Log in'},
             {'url': '/register', 'label': 'Register'},
         ]
-    return render(request, 'active_drivers.html', {"buttons": buttons})
+    return render(request, 'active_drivers.html', {"buttons": buttons, "is_customer": is_customer})
+
+def call_driver(request):
+    if request.method == 'POST':
+        # Get the pick-up time from the form data
+        # pickup_time = request.POST.get('pickup_time')
+
+        # Get the departure and arrival coordinates from hidden inputs
+        departure = request.POST.get('departure')
+        arrival = request.POST.get('arrival')
+
+        # Print the received data
+        # print(f"Pick-up time: {pickup_time}")
+        print(f"Departure: {departure}")
+        print(f"Arrival: {arrival}")
+
+        # Return a response, e.g. a redirect to a success page
+        return redirect('index')
+
+    # If the request is not a POST request, render the template with the form
+    return render(request, 'call_driver.html')
