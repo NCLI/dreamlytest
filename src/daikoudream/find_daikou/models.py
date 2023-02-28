@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 
 class CustomUser(AbstractUser):
     """ A custom user model to extend the default Django user model. """
@@ -68,3 +69,11 @@ class Order(models.Model):
     dropoff_longitude = models.FloatField()
     pickup_time = models.DateTimeField()
     completed = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        if not self.completed:
+            # check if there are any existing incomplete orders associated with the customer
+            existing_orders = Order.objects.filter(customer=self.customer, completed=False).exclude(id=self.id)
+            if existing_orders.exists():
+                raise ValidationError('A customer can only have one incomplete order at a time.')
+        super().save(*args, **kwargs)
