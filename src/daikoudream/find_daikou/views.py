@@ -42,6 +42,7 @@ def index(request):
     # Determine user type
     is_customer = False
     is_driver = False
+    has_active_order = False
 
     if request.user.is_authenticated:
         if hasattr(request.user, 'customer'):
@@ -62,6 +63,7 @@ def index(request):
                         "label": 'Cancel driver'
                     }
                 )
+                has_active_order = True
         elif is_driver:
             start_driving_url = '/start_driving'
             start_driving_label = 'Start driving'
@@ -82,7 +84,7 @@ def index(request):
             {'url': '/login', 'label': 'Log in'},
             {'url': '/register', 'label': 'Register'},
         ]
-    return render(request, 'active_drivers.html', {"buttons": buttons, "is_customer": is_customer})
+    return render(request, 'active_drivers.html', {"buttons": buttons, "is_customer": is_customer, "has_active_order": has_active_order})
 
 def call_driver(request):
     # Get the pick-up time from the form data
@@ -104,11 +106,29 @@ def call_driver(request):
 
 @login_required
 def history(request):
+    user = request.user
     if hasattr(request.user, 'customer'):
-        orders = Order.objects.filter(customer=request.user.customer)
+        orders = Order.objects.filter(customer=user.customer)
     elif hasattr(request.user, 'driver'):
-        orders = Order.objects.filter(driver=request.user.driver)
+        orders = Order.objects.filter(driver=user.driver)
     else:
         # If the user is not a Customer or a Driver, return an error message
         return render(request, 'error.html', {'error': 'You must be a Customer or a Driver to view previous orders.'})
-    return render(request, 'history.html', {'orders': orders})
+
+    order_info = []
+    for order in orders:
+        info = {
+            'start_location': f"{order.pickup_latitude}, {order.pickup_longitude}",
+            'end_location': f"{order.dropoff_latitude}, {order.dropoff_longitude}",
+            'car_make': order.car.make,
+            'car_model': order.car.model,
+            'car_year': order.car.year,
+            'order_completed': order.completed,
+        }
+        order_info.append(info)
+
+    context = {
+        'orders': order_info,
+    }
+
+    return render(request, 'history.html', context)

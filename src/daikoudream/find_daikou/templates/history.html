@@ -4,9 +4,14 @@
 <h1>Previous orders</h1>
 <ul>
   {% for order in orders %}
-  <li>Order {{ order.id }}: {{ order.pickup_time }} - {% if order.completed %}completed{% else %}not completed{% endif %}</li>
-  {% empty %}
-  <li>No previous orders.</li>
+  <div class="order">
+    <h2>Order - {% if order.order_completed %}completed{% else %}not completed{% endif %}</h2>
+    <p><strong>Start Location:</strong> {{ order.start_location }}</p>
+    <p><strong>End Location:</strong> {{ order.end_location }}</p>
+    <p><strong>Car Make:</strong> {{ order.car_make }}</p>
+    <p><strong>Car Model:</strong> {{ order.car_model }}</p>
+    <p><strong>Car Year:</strong> {{ order.car_year }}</p>
+  </div>
   {% endfor %}
 </ul>
 {% endblock %}

@@ -76,6 +76,7 @@
         });
         // Handle the click event on the map to set the departure and arrival points
         {% if is_customer %}
+        {% if not has_active_order %}
           // Declare default marker style
           var defaultStyle = new ol.style.Style({
             image: new ol.style.Circle({
@@ -146,6 +147,7 @@
             }
           });
         {% endif %}
+      {% endif %}
     });
 </script>
 {% if buttons %}
