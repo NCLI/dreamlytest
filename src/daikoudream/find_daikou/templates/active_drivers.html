@@ -1,10 +1,20 @@
 {% extends 'base.html' %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/ol@7.2.2/dist/ol.js"></script>
+{% load static %}
+<script src="{% static 'js/ol.js' %}"></script>
 {% endblock %}
 
 {% block content %}
+<style>
+ .ol-attribution {
+   position: absolute;
+   bottom: 10px;
+   left: 10px;
+   font-size: 12px;
+   max-width: calc(100% - 20px);
+ }
+</style>
 <h1>Active Drivers Map</h1>
 {% load static %}
 <div id="map" style="width: 800px; height: 600px;"></div>
@@ -31,6 +41,7 @@
         // Add the user location and driver markers to the map
         var map = new ol.Map({
             target: 'map',
+           // controls: ol.control.defaults({ attribution: false }),
             layers: [
                 new ol.layer.Tile({
                     source: new ol.source.OSM()
@@ -65,52 +76,77 @@
         });
         // Handle the click event on the map to set the departure and arrival points
         {% if is_customer %}
-        map.on('singleclick', function(event) {
-          var coordinate = event.coordinate;
-          var lonLat = ol.proj.toLonLat(coordinate);
-          var feature = new ol.Feature({
-            geometry: new ol.geom.Point(coordinate)
+          // Declare default marker style
+          var defaultStyle = new ol.style.Style({
+            image: new ol.style.Circle({
+              radius: 6,
+              fill: new ol.style.Fill({color: 'white'}),
+              stroke: new ol.style.Stroke({color: 'black', width: 2})
+            })
           });
-          if (!departure) {
-            departure = lonLat;
-            feature.setStyle(new ol.style.Style({
-              image: new ol.style.Circle({
-                radius: 6,
-                fill: new ol.style.Fill({color: 'white'}),
-                stroke: new ol.style.Stroke({color: 'green', width: 2})
-              })
-            }));
-          } else if (!arrival) {
-            arrival = lonLat;
-            feature.setStyle(new ol.style.Style({
-              image: new ol.style.Circle({
-                radius: 6,
-                fill: new ol.style.Fill({color: 'white'}),
-                stroke: new ol.style.Stroke({color: 'red', width: 2})
-              })
-            }));
-          } else {
-            // Show pop-up to confirm selection
-            if (confirm("Confirm selection of departure: " + departure + " and arrival: " + arrival + "?")) {
-              // Send coordinates to call_driver
-              window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival;
-            } else {
-              // Unset variables
-              departure = null;
-              arrival = null;
-              feature.setStyle(defaultStyle);
-            }
-          }
-          var vectorSource = new ol.source.Vector({
-            features: [feature]
-          });
+
+          // Initialize variables
+          var departure = null;
+          var arrival = null;
+          var departureFeature = null;
+          var arrivalFeature = null;
+          var vectorSource = new ol.source.Vector();
           var vectorLayer = new ol.layer.Vector({
             source: vectorSource
           });
           map.addLayer(vectorLayer);
-        });
+
+          // Add click handler
+          map.on('singleclick', function(event) {
+            var coordinate = event.coordinate;
+            var lonLat = ol.proj.toLonLat(coordinate);
+            var feature = new ol.Feature({
+              geometry: new ol.geom.Point(coordinate)
+            });
+            if (!departure) {
+              departure = lonLat;
+              departureFeature = feature;
+              departureFeature.setStyle(new ol.style.Style({
+                image: new ol.style.Circle({
+                  radius: 6,
+                  fill: new ol.style.Fill({color: 'white'}),
+                  stroke: new ol.style.Stroke({color: 'green', width: 2})
+                })
+              }));
+              vectorSource.addFeature(departureFeature);
+            } else if (!arrival) {
+              arrival = lonLat;
+              arrivalFeature = feature;
+              arrivalFeature.setStyle(new ol.style.Style({
+                image: new ol.style.Circle({
+                  radius: 6,
+                  fill: new ol.style.Fill({color: 'white'}),
+                  stroke: new ol.style.Stroke({color: 'red', width: 2})
+                })
+              }));
+              vectorSource.addFeature(arrivalFeature);
+              // Add the confirm button
+              var confirmBtn = document.getElementById('confirm-btn');
+              confirmBtn.disabled = false;
+              confirmBtn.addEventListener('click', function() {
+                // Show pop-up to confirm selection
+                let time = prompt("Confirm selection of departure: " + departure + " and arrival: " + arrival + "?\n\n" + "If correct, please enter a pick-up time.")
+                if (time != "" && time != null) {
+                  // Send coordinates to call_driver
+                  window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival + "&time=" + time;
+                } else {
+                  // Unset variables and remove markers
+                  departure = null;
+                  arrival = null;
+                  vectorSource.removeFeature(departureFeature);
+                  vectorSource.removeFeature(arrivalFeature);
+                  confirmBtn.disabled = true;
+                }
+              });
+            }
+          });
         {% endif %}
-    });    // Handle the click event on the "Call driver" button
+    });
 </script>
 {% if buttons %}
 <div class="btn-group" role="group" aria-label="Basic example">
@@ -120,5 +156,8 @@
 </div>
 {% else %}
 <p>No buttons available</p>
+{% endif %}
+{% if is_customer %}
+<button id="confirm-btn" class="btn btn-primary" disabled>Confirm Selection</button>
 {% endif %}
 {% endblock %}

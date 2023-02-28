@@ -82,6 +82,14 @@ DATABASES = {
         'NAME': 'daikoudream',
         'USER': 'daikoudreamuser',
         'PASSWORD': 'mypassword',
+        'HOST': '89.150.133.107',
+        'PORT': '8008',
+    },
+    'backup': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'daikoudream',
+        'USER': 'daikoudreamuser',
+        'PASSWORD': 'mypassword',
         'HOST': '10.0.0.254',
         'PORT': '5432',
     }

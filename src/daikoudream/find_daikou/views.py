@@ -52,7 +52,7 @@ def index(request):
         # Set button labels and URLs
         if is_customer:
             buttons = [
-                {'url': '/history', 'label': 'See history'},
+                {'url': '/dashboard/history', 'label': 'See history'},
                 {'url': '/update_info', 'label': 'Update information'},
             ]
             if request.user.customer.orders.filter(completed=False).exists():
@@ -70,7 +70,7 @@ def index(request):
                 start_driving_label = 'Stop driving'
             buttons = [
                 {'url': start_driving_url, 'label': start_driving_label},
-                {'url': '/history', 'label': 'See history'},
+                {'url': '/dashboard/history', 'label': 'See history'},
                 {'url': '/update_info', 'label': 'Update information'},
             ]
         else:
@@ -85,21 +85,30 @@ def index(request):
     return render(request, 'active_drivers.html', {"buttons": buttons, "is_customer": is_customer})
 
 def call_driver(request):
-    if request.method == 'POST':
-        # Get the pick-up time from the form data
-        # pickup_time = request.POST.get('pickup_time')
+    # Get the pick-up time from the form data
+    print(request)
+    pickup_time = request.GET.get('time')
 
-        # Get the departure and arrival coordinates from hidden inputs
-        departure = request.POST.get('departure')
-        arrival = request.POST.get('arrival')
+    # Get the departure and arrival coordinates from hidden inputs
+    departure = request.GET.get('departure')
+    arrival = request.GET.get('arrival')
 
-        # Print the received data
-        # print(f"Pick-up time: {pickup_time}")
-        print(f"Departure: {departure}")
-        print(f"Arrival: {arrival}")
+    # Print the received data
+    print(f"Pick-up time: {pickup_time}")
+    print(f"Departure: {departure}")
+    print(f"Arrival: {arrival}")
 
-        # Return a response, e.g. a redirect to a success page
-        return redirect('index')
+    # Return a response, e.g. a redirect to a success page
+    return redirect('index')
 
-    # If the request is not a POST request, render the template with the form
-    return render(request, 'call_driver.html')
+
+@login_required
+def history(request):
+    if hasattr(request.user, 'customer'):
+        orders = Order.objects.filter(customer=request.user.customer)
+    elif hasattr(request.user, 'driver'):
+        orders = Order.objects.filter(driver=request.user.driver)
+    else:
+        # If the user is not a Customer or a Driver, return an error message
+        return render(request, 'error.html', {'error': 'You must be a Customer or a Driver to view previous orders.'})
+    return render(request, 'history.html', {'orders': orders})

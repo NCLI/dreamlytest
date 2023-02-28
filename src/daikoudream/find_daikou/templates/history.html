@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Previous orders</h1>
+<ul>
+  {% for order in orders %}
+  <li>Order {{ order.id }}: {{ order.pickup_time }} - {% if order.completed %}completed{% else %}not completed{% endif %}</li>
+  {% empty %}
+  <li>No previous orders.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

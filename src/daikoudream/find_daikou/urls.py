@@ -6,4 +6,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('test/', views.available_drivers, name='driverlist'),
     path('call_driver/', views.call_driver, name='call_driver'),
+    path('history/', views.history, name='history'),
 ]

@@ -54,7 +54,9 @@ class Order(models.Model):
     driver = models.ForeignKey(
         'find_daikou.Driver',
         on_delete=models.CASCADE,
-        related_name='orders'
+        related_name='orders',
+        null=True,
+        blank=True
     )
     car = models.ForeignKey(
         'find_daikou.Car',
