@@ -39,6 +39,7 @@
         });
 
         var features = {{ features|safe }};
+        var time = "";
         // Add the user location and driver markers to the map
         var map = new ol.Map({
             target: 'map',
@@ -221,10 +222,21 @@
               });
 
                 // Enable confirm button
+
                 var confirmBtn = document.getElementById('confirm-btn');
                 confirmBtn.disabled = false;
                 confirmBtn.addEventListener('click', function() {
-                    window.location.href = '/confirm-order/' + orderId;
+                  // Show pop-up to confirm selection
+                  let time = prompt("How many minutes will it take you to get to the pick-up point?")
+                  if (time != "" && time != null) {
+                    // Send coordinates to call_driver
+                    window.location.href = "{% url 'confirm_order' }?order_id=" + orderId + "&time_to_pickup=" + time;
+                  } else {
+                    // Unset variables and remove markers
+                    selectedOrder = null;
+                    map.removeLayer(markerLayer);
+                    confirmBtn.disabled = true;
+                  }
                 });
             });
         });
