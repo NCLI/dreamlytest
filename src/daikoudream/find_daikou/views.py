@@ -89,6 +89,7 @@ def index(request):
     is_customer = False
     is_driver = False
     has_active_order = False
+    is_available = False
     orders = None
     features = None
 
@@ -97,6 +98,8 @@ def index(request):
             is_customer = True
         elif hasattr(request.user, 'driver'):
             is_driver = True
+            if request.user.driver.is_available:
+                is_available = True
 
         # Set button labels and URLs
         if is_customer:
@@ -113,10 +116,10 @@ def index(request):
                 )
                 has_active_order = True
         elif is_driver:
-            start_driving_url = '/start_driving'
+            start_driving_url = '/dashboard/set_driver_available'
             start_driving_label = 'Start driving'
             if request.user.driver.is_available:
-                start_driving_url = '/stop_driving'
+                start_driving_url = '/dashboard/set_driver_unavailable'
                 start_driving_label = 'Stop driving'
             buttons = [
                 {'url': start_driving_url, 'label': start_driving_label},
@@ -174,6 +177,7 @@ def index(request):
                                                    "is_customer": is_customer,
                                                    "has_active_order": has_active_order,
                                                    "is_driver": is_driver,
+                                                   "is_available": is_available,
                                                    "orders": orders,
                                                    "features": features
                                                    })
@@ -224,3 +228,17 @@ def history(request):
     }
 
     return render(request, 'history.html', context)
+
+@login_required
+def set_driver_available(request):
+    driver = request.user.driver
+    driver.is_available = True
+    driver.save()
+    return redirect('index')
+
+@login_required
+def set_driver_unavailable(request):
+    driver = request.user.driver
+    driver.is_available = False
+    driver.save()
+    return redirect('index')

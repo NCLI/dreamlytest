@@ -151,7 +151,7 @@
         {% endif %}
       {% endif %}
 
-        {% if is_driver %}
+        {% if is_driver and is_available %}
         var selectedOrder = null;
         var orderLinks = document.querySelectorAll('a.order');
 
@@ -257,7 +257,7 @@
 {% if is_customer or is_driver %}
 <button id="confirm-btn" class="btn btn-primary" disabled>Confirm</button>
 {% endif %}
-{% if is_driver %}
+{% if is_driver and is_available %}
 <ul>
   {% for order in orders %}
   <li>
