@@ -39,8 +39,12 @@ class Driver(models.Model):
         related_name='driver'
     )
     is_available = models.BooleanField(default=False)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    latitude = models.FloatField(
+        default = 0.0
+    )
+    longitude = models.FloatField(
+        default = 0.0
+    )
     license_number = models.CharField(max_length=50)
     bank_account_info = models.CharField(max_length=4096)
 

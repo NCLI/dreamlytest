@@ -38,6 +38,7 @@
             ]
         });
 
+        var features = {{ features|safe }};
         // Add the user location and driver markers to the map
         var map = new ol.Map({
             target: 'map',
@@ -148,6 +149,88 @@
           });
         {% endif %}
       {% endif %}
+
+        {% if is_driver %}
+        var selectedOrder = null;
+        var orderLinks = document.querySelectorAll('a.order');
+
+        orderLinks.forEach(function(link) {
+            link.addEventListener('click', function(event) {
+                event.preventDefault();
+                if (selectedOrder !== null) {
+                    // Deselect previous order
+                    document.querySelector('a.order[data-id="' + selectedOrder + '"]').classList.remove('selected');
+                }
+
+                var orderId = this.getAttribute('data-id');
+                selectedOrder = orderId;
+                this.classList.add('selected');
+
+                var pickupFeature = features.find(function(feature) {
+                    return feature.properties.id == orderId && feature.properties.type == 'pickup';
+                });
+                var dropoffFeature = features.find(function(feature) {
+                    return feature.properties.id == orderId && feature.properties.type == 'dropoff';
+                });
+
+                var pickupCoordinates = pickupFeature.geometry.coordinates;
+                var dropoffCoordinates = dropoffFeature.geometry.coordinates;
+
+                // Create markers
+                var pickupMarker = new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat(pickupCoordinates))
+                });
+                var dropoffMarker = new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat(dropoffCoordinates))
+                });
+
+              var departureFeatureStyle = new ol.style.Style({
+                image: new ol.style.Circle({
+                  radius: 6,
+                  fill: new ol.style.Fill({color: 'white'}),
+                  stroke: new ol.style.Stroke({color: 'green', width: 2})
+                })
+            });
+              var arrivalFeatureStyle = new ol.style.Style({
+                image: new ol.style.Circle({
+                  radius: 6,
+                  fill: new ol.style.Fill({color: 'white'}),
+                  stroke: new ol.style.Stroke({color: 'red', width: 2})
+                })
+              });
+
+                pickupMarker.setStyle(departureFeatureStyle);
+                dropoffMarker.setStyle(arrivalFeatureStyle);
+
+                // Add markers to map
+                var markerSource = new ol.source.Vector({
+                    features: [pickupMarker, dropoffMarker]
+                });
+
+                var markerLayer = new ol.layer.Vector({
+                    source: markerSource
+                });
+
+                map.addLayer(markerLayer);
+
+              // Zoom to show markers
+              var extent = markerSource.getExtent();
+              map.getView().fit(extent, {
+                padding: [50, 50, 50, 50],
+                duration: 500
+              });
+
+                // Enable confirm button
+                var confirmBtn = document.getElementById('confirm-btn');
+                confirmBtn.disabled = false;
+                confirmBtn.addEventListener('click', function() {
+                    window.location.href = '/confirm-order/' + orderId;
+                });
+            });
+        });
+      {% endif %}
+
+
     });
 </script>
 {% if buttons %}
@@ -159,7 +242,18 @@
 {% else %}
 <p>No buttons available</p>
 {% endif %}
-{% if is_customer %}
-<button id="confirm-btn" class="btn btn-primary" disabled>Confirm Selection</button>
+{% if is_customer or is_driver %}
+<button id="confirm-btn" class="btn btn-primary" disabled>Confirm</button>
+{% endif %}
+{% if is_driver %}
+<ul>
+  {% for order in orders %}
+  <li>
+    <a href="#" class="order" data-id="{{ order.id }}">
+      Order #{{ order.id }}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
 {% endif %}
 {% endblock %}

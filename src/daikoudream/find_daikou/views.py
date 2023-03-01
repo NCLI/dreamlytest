@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.gis.geos import Point
 
 from find_daikou.models import Driver, Order
 from .forms import DriverForm, RegistrationForm
@@ -21,6 +22,51 @@ def available_drivers(request):
 
     return JsonResponse(data)
 
+def open_orders(request):
+    # Retrieve all open orders from the database
+    orders = Order.objects.filter(driver=None)
+
+    # Create a list of features for the OpenLayers map
+    features = []
+    for order in orders:
+        # Create a point feature for the pickup location
+        pickup_location = Point(order.pickup_longitude, order.pickup_latitude)
+        pickup_feature = {
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': [pickup_location.x, pickup_location.y]
+            },
+            'properties': {
+                'id': order.id,
+                'type': 'pickup',
+                'description': "Nada"
+            }
+        }
+        features.append(pickup_feature)
+
+        # Create a point feature for the dropoff location
+        dropoff_location = Point(order.dropoff_longitude, order.dropoff_latitude)
+        dropoff_feature = {
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': [dropoff_location.x, dropoff_location.y]
+            },
+            'properties': {
+                'id': order.id,
+                'type': 'dropoff',
+                'description': "Nada"
+            }
+        }
+        features.append(dropoff_feature)
+
+    context = {
+        'orders': orders,
+        'features': features
+    }
+
+    return render(request, 'open_orders.html', context)
 
 def register(request):
     if request.method == 'POST':
@@ -43,6 +89,8 @@ def index(request):
     is_customer = False
     is_driver = False
     has_active_order = False
+    orders = None
+    features = None
 
     if request.user.is_authenticated:
         if hasattr(request.user, 'customer'):
@@ -75,6 +123,44 @@ def index(request):
                 {'url': '/dashboard/history', 'label': 'See history'},
                 {'url': '/update_info', 'label': 'Update information'},
             ]
+            # Retrieve all open orders from the database
+            orders = Order.objects.filter(driver=None)
+
+            # Create a list of features for the OpenLayers map
+            features = []
+            for order in orders:
+                # Create a point feature for the pickup location
+                pickup_location = Point(order.pickup_longitude, order.pickup_latitude)
+                pickup_feature = {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [pickup_location.x, pickup_location.y]
+                    },
+                    'properties': {
+                        'id': order.id,
+                        'type': 'pickup',
+                        'description': "Nada"
+                    }
+                }
+                features.append(pickup_feature)
+
+                # Create a point feature for the dropoff location
+                dropoff_location = Point(order.dropoff_longitude, order.dropoff_latitude)
+                dropoff_feature = {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [dropoff_location.x, dropoff_location.y]
+                    },
+                    'properties': {
+                        'id': order.id,
+                        'type': 'dropoff',
+                        'description': "Nada"
+                    }
+                }
+                features.append(dropoff_feature)
+
         else:
             buttons = [
                 {'url': '/logout', 'label': 'Logout'},
@@ -84,7 +170,13 @@ def index(request):
             {'url': '/login', 'label': 'Log in'},
             {'url': '/register', 'label': 'Register'},
         ]
-    return render(request, 'active_drivers.html', {"buttons": buttons, "is_customer": is_customer, "has_active_order": has_active_order})
+    return render(request, 'active_drivers.html', {"buttons": buttons,
+                                                   "is_customer": is_customer,
+                                                   "has_active_order": has_active_order,
+                                                   "is_driver": is_driver,
+                                                   "orders": orders,
+                                                   "features": features
+                                                   })
 
 def call_driver(request):
     # Get the pick-up time from the form data
