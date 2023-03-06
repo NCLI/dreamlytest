@@ -1,8 +1,9 @@
-from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.gis.geos import Point
+from django.db import transaction
 
 from find_daikou.models import Driver, Order
 from .forms import DriverForm, RegistrationForm
@@ -90,8 +91,8 @@ def index(request):
     is_driver = False
     has_active_order = False
     is_available = False
-    orders = None
-    features = None
+    orders = []
+    features = []
 
     if request.user.is_authenticated:
         if hasattr(request.user, 'customer'):
@@ -118,14 +119,26 @@ def index(request):
         elif is_driver:
             start_driving_url = '/dashboard/set_driver_available'
             start_driving_label = 'Start driving'
-            if request.user.driver.is_available:
-                start_driving_url = '/dashboard/set_driver_unavailable'
-                start_driving_label = 'Stop driving'
             buttons = [
-                {'url': start_driving_url, 'label': start_driving_label},
                 {'url': '/dashboard/history', 'label': 'See history'},
                 {'url': '/update_info', 'label': 'Update information'},
             ]
+            if request.user.driver.orders.filter(completed=False).exists():
+                buttons.append(
+                    {"url": '/dashboard/cancel_order',
+                     "label": "Cancel current engagement"}
+                )
+            if request.user.driver.is_available:
+                buttons.append(
+                    {"url": '/dashboard/set_driver_unavailable',
+                     "label": "Stop driving"}
+                )
+            else:
+                buttons.extend(
+                    [
+                        {'url': start_driving_url, 'label': start_driving_label},
+                    ]
+                )
             # Retrieve all open orders from the database
             orders = Order.objects.filter(driver=None)
 
@@ -183,7 +196,7 @@ def index(request):
                                                    })
 
 def call_driver(request):
-    # Get the pick-up time from the form data
+    # Get the pick-up time
     print(request)
     pickup_time = request.GET.get('time')
 
@@ -242,3 +255,54 @@ def set_driver_unavailable(request):
     driver.is_available = False
     driver.save()
     return redirect('index')
+
+@login_required
+@transaction.atomic
+def confirm_order(request):
+    order_id = request.GET['order_id']
+    eta = request.GET['time_to_pickup']
+    order = Order.objects.get(id=order_id)
+    if hasattr(request.user, 'driver'):
+        driver = request.user.driver
+        order.assign_driver(driver)
+        order.eta = eta
+        order.save()
+    return redirect('index')
+
+@login_required
+@transaction.atomic
+def cancel_order(request):
+    # get the current user
+    user = request.user
+
+    # check if the user is a driver or customer
+    if hasattr(user, 'driver'):
+        # if the user is a driver, unassign them from the order
+        try:
+            order = user.driver.orders.get(completed=False)
+        except Order.DoesNotExist:
+            # the driver doesn't have an active order
+            return HttpResponseBadRequest('No active order found.')
+
+        order.driver = None
+        order.save()
+
+        return redirect('index')
+
+    elif hasattr(user, 'customer'):
+        # if the user is a customer, mark the order as completed and unassign the driver
+        try:
+            order = user.customer.orders.get(completed=False)
+        except Order.DoesNotExist:
+            # the customer doesn't have an active order
+            return HttpResponseBadRequest('No active order found.')
+
+        order.completed = True
+        order.driver = None
+        order.save()
+
+        return redirect('index')
+
+    else:
+        # the user is neither a driver nor a customer
+        return HttpResponseBadRequest('User is not a driver or customer.')

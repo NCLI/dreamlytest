@@ -78,6 +78,15 @@ class Order(models.Model):
         if not self.completed:
             # check if there are any existing incomplete orders associated with the customer
             existing_orders = Order.objects.filter(customer=self.customer, completed=False).exclude(id=self.id)
-            if existing_orders.exists():
+            if self.driver != None:
+               existing_orders_driver = Order.objects.filter(driver=self.driver, completed=False).exclude(id=self.id)
+               if existing_orders_driver.exists():
+                   raise ValidationError('A driver can only have one incomplete order at a time.')
+            existing_orders_user = Order.objects.filter(customer=self.customer, completed=False).exclude(id=self.id)
+            if existing_orders_user.exists():
                 raise ValidationError('A customer can only have one incomplete order at a time.')
         super().save(*args, **kwargs)
+
+    def assign_driver(self, driver):
+        self.driver = driver
+        self.save()

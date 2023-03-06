@@ -16,7 +16,7 @@
       devShell = pkgs:
         pkgs.mkShell {
           buildInputs = [
-            pkgs.futhark
+            pkgs.erlang
             (pkgs.${python}.withPackages
               (ps: with ps; [
                 pip

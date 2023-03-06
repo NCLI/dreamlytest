@@ -230,7 +230,7 @@
                   let time = prompt("How many minutes will it take you to get to the pick-up point?")
                   if (time != "" && time != null) {
                     // Send coordinates to call_driver
-                    window.location.href = "{% url 'confirm_order' }?order_id=" + orderId + "&time_to_pickup=" + time;
+                    window.location.href = "{% url 'confirm_order' %}?order_id=" + orderId + "&time_to_pickup=" + time;
                   } else {
                     // Unset variables and remove markers
                     selectedOrder = null;

@@ -77,15 +77,15 @@ WSGI_APPLICATION = 'daikoudream.wsgi.application'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 DATABASES = {
+    # 'backup': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'daikoudream',
+    #     'USER': 'daikoudreamuser',
+    #     'PASSWORD': 'mypassword',
+    #     'HOST': '89.150.133.107',
+    #     'PORT': '8008',
+    # },
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'daikoudream',
-        'USER': 'daikoudreamuser',
-        'PASSWORD': 'mypassword',
-        'HOST': '89.150.133.107',
-        'PORT': '8008',
-    },
-    'backup': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'daikoudream',
         'USER': 'daikoudreamuser',
