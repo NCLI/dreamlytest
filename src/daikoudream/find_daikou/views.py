@@ -18,20 +18,6 @@ from find_daikou.models import Driver, Order, Car
 from .forms import DriverForm, RegistrationForm, CarForm, CustomerForm
 from .models import CustomUser, Driver, Customer
 
-
-def available_drivers(request):
-    drivers = Driver.objects.filter(is_available=True)
-    driver_points = [{'type': 'Feature',
-                      'geometry': {'type': 'Point', 'coordinates': [d.latitude, d.longitude]},
-                      'properties': {'name': d.user.username}} for d in drivers]
-
-    data = {
-        'type': 'FeatureCollection',
-        'features': driver_points
-    }
-
-    return JsonResponse(data)
-
 def available_drivers(request):
     if request.user.is_authenticated:
         try:
