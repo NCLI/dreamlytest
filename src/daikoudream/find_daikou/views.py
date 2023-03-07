@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import strptime
 
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -98,6 +98,7 @@ def index(request):
     orders = []
     features = []
     cars =[]
+    eta = None
 
     if request.user.is_authenticated:
         if hasattr(request.user, 'customer'):
@@ -116,6 +117,7 @@ def index(request):
                 {'url': '/dashboard/add_car', 'label': 'Add car'},
             ]
             if request.user.customer.orders.filter(completed=False).exists():
+                active_order = request.user.customer.orders.filter(completed=False)[0]
                 buttons.append(
                     {
                         "url": '/dashboard/cancel_order',
@@ -123,9 +125,7 @@ def index(request):
                     }
                 )
                 has_active_order = True
-            active_orders = request.user.customer.orders.filter(driver=not None, completed=False)
-            if active_orders.exists():
-                eta = active_orders[0].eta
+                eta = active_order.eta
         elif is_driver:
             start_driving_url = '/dashboard/set_driver_available'
             start_driving_label = 'Start driving'
@@ -134,9 +134,12 @@ def index(request):
                 {'url': '/dashboard/modify_user', 'label': 'Update information'},
             ]
             if request.user.driver.orders.filter(completed=False).exists():
-                buttons.append(
+                buttons.extend([
                     {"url": '/dashboard/cancel_order',
-                     "label": "Cancel current engagement"}
+                     "label": "Cancel current engagement"},
+                    {"url": '/dashboard/update_eta',
+                     "label": "Update ETA"},
+                    ]
                 )
             if request.user.driver.is_available:
                 buttons.append(
@@ -204,7 +207,8 @@ def index(request):
                                                    "orders": orders,
                                                    "features": features,
                                                    "cars": cars,
-                                                   "now": datetime.now().strftime('%Y-%m-%dT%H:%M')
+                                                   "now": datetime.now().strftime('%Y-%m-%dT%H:%M'),
+                                                   "eta": eta,
                                                    })
 
 @login_required
@@ -282,12 +286,12 @@ def set_driver_unavailable(request):
 @transaction.atomic
 def confirm_order(request):
     order_id = request.GET['order_id']
-    eta = request.GET['time_to_pickup']
+    time_to_pickup = int(request.GET['time_to_pickup'])
     order = Order.objects.get(id=order_id)
     if hasattr(request.user, 'driver'):
         driver = request.user.driver
         order.assign_driver(driver)
-        order.eta = eta
+        order.eta = datetime.now() + timedelta(minutes=time_to_pickup)
         order.save()
     return redirect('index')
 
@@ -391,3 +395,25 @@ def modify_user(request):
             # If the user is not a Customer or a Driver, return an error message
             return render(request, 'error.html', {'error': 'You must be a Customer or a Driver'})
     return render(request, 'modify_user.html', {'form': form})
+
+@login_required
+@transaction.atomic
+def update_eta(request):
+    user = request.user
+    order = get_object_or_404(Order, driver=user.driver, completed=False)
+
+    if request.method == 'POST':
+        # Get the minutes input from the form
+        minutes = int(request.POST.get('minutes'))
+
+        # Calculate the new ETA
+        eta = datetime.now() + timedelta(minutes=minutes)
+
+        # Update the Order object with the new ETA
+        order.eta = eta
+        order.save()
+
+        # Redirect to the order detail page
+        return redirect('index')
+
+    return render(request, 'update_eta.html', {'order': order})

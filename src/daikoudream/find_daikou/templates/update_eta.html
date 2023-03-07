@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Update ETA for order {{ order.id }}</h1>
+
+<form method="post">
+  {% csrf_token %}
+  <label for="minutes">Minutes away:</label>
+  <input type="number" name="minutes" id="minutes" required>
+  <br>
+  <button type="submit">Update ETA</button>
+</form>
+
+{% endblock %}

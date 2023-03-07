@@ -17,6 +17,9 @@
 </style>
 <h1>Active Drivers Map</h1>
 {% load static %}
+{% if is_customer and eta != None %}
+<p>The estimated time of arrival is {{ eta|date:"F j, Y H:i" }}.</p>
+{% endif %}
 <div id="map" style="width: 800px; height: 600px;"></div>
 <script type="text/javascript">
     var departure, arrival;

@@ -16,4 +16,5 @@ urlpatterns = [
     path('set_driver_available/', views.set_driver_available, name='set_driver_available'),
     path('set_driver_unavailable/', views.set_driver_unavailable, name='set_driver_unavailable'),
     path('cancel_order/', views.cancel_order, name='cancel_order'),
+    path('update_eta/', views.update_eta, name='update_eta'),
 ]
