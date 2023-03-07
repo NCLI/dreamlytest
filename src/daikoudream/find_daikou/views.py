@@ -1,13 +1,16 @@
+from typing import List, Dict, Any, Union, Optional
+
 from datetime import datetime, timedelta
 from time import strptime
 
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.gis.geos import Point
 from django.db import transaction
 from django.views.decorators.http import require_POST
+from django.db.models.query import QuerySet
 
 from find_daikou.models import Driver, Order, Car
 from .forms import DriverForm, RegistrationForm, CarForm, CustomerForm
@@ -17,7 +20,7 @@ from .models import CustomUser, Driver, Customer
 def available_drivers(request):
     drivers = Driver.objects.filter(is_available=True)
     driver_points = [{'type': 'Feature',
-                      'geometry': {'type': 'Point', 'coordinates': [d.longitude, d.latitude]},
+                      'geometry': {'type': 'Point', 'coordinates': [d.latitude, d.longitude]},
                       'properties': {'name': d.user.username}} for d in drivers]
 
     data = {
@@ -27,53 +30,16 @@ def available_drivers(request):
 
     return JsonResponse(data)
 
-def open_orders(request):
-    # Retrieve all open orders from the database
-    orders = Order.objects.filter(driver=None, completed=False)
+def register(request: HttpRequest) -> Union[HttpResponse, HttpResponseRedirect]:
+    """
+    A view responsible for user registration.
 
-    # Create a list of features for the OpenLayers map
-    features = []
-    for order in orders:
-        # Create a point feature for the pickup location
-        pickup_location = Point(order.pickup_longitude, order.pickup_latitude)
-        pickup_feature = {
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Point',
-                'coordinates': [pickup_location.x, pickup_location.y]
-            },
-            'properties': {
-                'id': order.id,
-                'type': 'pickup',
-                'description': "Point where you would like to go to."
-            }
-        }
-        features.append(pickup_feature)
+    Args:
+        request (HttpRequest): An HTTP request object representing the incoming request.
 
-        # Create a point feature for the dropoff location
-        dropoff_location = Point(order.dropoff_longitude, order.dropoff_latitude)
-        dropoff_feature = {
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Point',
-                'coordinates': [dropoff_location.x, dropoff_location.y]
-            },
-            'properties': {
-                'id': order.id,
-                'type': 'dropoff',
-                'description': "Point where you would like to be picked up."
-            }
-        }
-        features.append(dropoff_feature)
-
-    context = {
-        'orders': orders,
-        'features': features
-    }
-
-    return render(request, 'open_orders.html', context)
-
-def register(request):
+    Returns:
+        Union[HttpResponse, HttpResponseRedirect]: An HTTP response object representing the outgoing response.
+    """
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
@@ -88,9 +54,16 @@ def register(request):
         form = RegistrationForm()
     return render(request, 'register.html', {'form': form})
 
-def index(request):
-    """ A view responsible for welcoming users. """
-    # Determine user type
+def index(request: HttpRequest) -> HttpResponse:
+    """
+    The center of the Find Daikou experiential extravaganza.
+
+    Args:
+        request (HttpRequest): An HTTP request object representing the incoming request.
+
+    Returns:
+        HttpResponse: An HTTP response object representing the outgoing response.
+    """
     is_customer = False
     is_driver = False
     has_active_order = False
@@ -101,119 +74,212 @@ def index(request):
     eta = None
 
     if request.user.is_authenticated:
-        if hasattr(request.user, 'customer'):
+        user_type = get_user_type(request.user)
+        if user_type == 'customer':
             is_customer = True
             cars = Car.objects.filter(customer=request.user.customer)
-        elif hasattr(request.user, 'driver'):
+        elif user_type == 'driver':
             is_driver = True
             if request.user.driver.is_available:
                 is_available = True
 
+            orders = Order.objects.filter(driver=None, completed=False)
+            features = create_order_features(orders)
+
         # Set button labels and URLs
+        buttons = create_buttons(user_type, request.user, has_active_order)
+
+        # Set active order details
         if is_customer:
-            buttons = [
-                {'url': '/dashboard/history', 'label': 'See history'},
-                {'url': '/dashboard/modify_user', 'label': 'Update information'},
-                {'url': '/dashboard/add_car', 'label': 'Add car'},
-            ]
-            if request.user.customer.orders.filter(completed=False).exists():
-                active_order = request.user.customer.orders.filter(completed=False)[0]
-                buttons.append(
-                    {
-                        "url": '/dashboard/cancel_order',
-                        "label": 'Complete or cancel drive'
-                    }
-                )
+            active_order = get_active_order(request.user.customer.orders)
+            if active_order:
                 has_active_order = True
                 eta = active_order.eta
         elif is_driver:
-            start_driving_url = '/dashboard/set_driver_available'
-            start_driving_label = 'Start driving'
-            buttons = [
-                {'url': '/dashboard/history', 'label': 'See history'},
-                {'url': '/dashboard/modify_user', 'label': 'Update information'},
-            ]
-            if request.user.driver.orders.filter(completed=False).exists():
-                buttons.extend([
-                    {"url": '/dashboard/cancel_order',
-                     "label": "Cancel current engagement"},
-                    {"url": '/dashboard/update_eta',
-                     "label": "Update ETA"},
-                    ]
-                )
-            if request.user.driver.is_available:
-                buttons.append(
-                    {"url": '/dashboard/set_driver_unavailable',
-                     "label": "Stop driving"}
-                )
-            else:
-                buttons.extend(
-                    [
-                        {'url': start_driving_url, 'label': start_driving_label},
-                    ]
-                )
-            # Retrieve all open orders from the database
-            orders = Order.objects.filter(driver=None, completed=False)
+            active_order = get_active_order(request.user.driver.orders)
 
-            # Create a list of features for the OpenLayers map
-            features = []
-            for order in orders:
-                # Create a point feature for the pickup location
-                pickup_location = Point(order.pickup_longitude, order.pickup_latitude)
-                pickup_feature = {
-                    'type': 'Feature',
-                    'geometry': {
-                        'type': 'Point',
-                        'coordinates': [pickup_location.x, pickup_location.y]
-                    },
-                    'properties': {
-                        'id': order.id,
-                        'type': 'pickup',
-                        'description': "Nada"
-                    }
-                }
-                features.append(pickup_feature)
-
-                # Create a point feature for the dropoff location
-                dropoff_location = Point(order.dropoff_longitude, order.dropoff_latitude)
-                dropoff_feature = {
-                    'type': 'Feature',
-                    'geometry': {
-                        'type': 'Point',
-                        'coordinates': [dropoff_location.x, dropoff_location.y]
-                    },
-                    'properties': {
-                        'id': order.id,
-                        'type': 'dropoff',
-                        'description': "Nada"
-                    }
-                }
-                features.append(dropoff_feature)
-
-        else:
-            buttons = [
-                {'url': '/logout', 'label': 'Logout'},
-            ]
     else:
+        buttons = create_buttons('anonymous')
+
+    return render(request, 'active_drivers.html', {
+        "buttons": buttons,
+        "is_customer": is_customer,
+        "has_active_order": has_active_order,
+        "is_driver": is_driver,
+        "is_available": is_available,
+        "orders": orders,
+        "features": features,
+        "cars": cars,
+        "now": datetime.now().strftime('%Y-%m-%dT%H:%M'),
+        "eta": eta,
+    })
+
+def get_user_type(user: Any) -> str:
+    """
+    Determine the user type based on the user object.
+
+    Args:
+    - user: A user object.
+
+    Returns:
+    - A string indicating the user type.
+    """
+    if hasattr(user, 'customer'):
+        return 'customer'
+    elif hasattr(user, 'driver'):
+        return 'driver'
+    else:
+        return 'anonymous'
+
+def get_active_order(orders: QuerySet) -> Optional[Order]:
+    """
+    Return the first active order in the given query set of orders.
+
+    Args:
+    - orders: A query set of orders.
+
+    Returns:
+    - The first active order in the query set, or None if there are no active orders.
+    """
+    active_orders = orders.filter(completed=False)
+    if active_orders.exists():
+        return active_orders.first()
+    return None
+
+def create_order_features(orders: QuerySet) -> List[Dict[str, Union[str, Dict[str, Union[str, List[float]]]]]]:
+    """
+    Create a list of features for all orders in the given query set.
+
+    Args:
+    - orders: A query set of orders.
+
+    Returns:
+    - A list of features, where each feature is a dictionary with the following keys:
+      - 'type': A string indicating the type of the feature, which is 'Feature' in this case.
+      - 'geometry': A dictionary representing the geometry of the feature, which has the following keys:
+        - 'type': A string indicating the type of the geometry, which is 'Point' in this case.
+        - 'coordinates': A list of two floating point numbers representing the coordinates of the feature.
+      - 'properties': A dictionary containing additional properties of the feature, which has the following keys:
+        - 'id': An integer indicating the ID of the order.
+        - 'type': A string indicating the type of the order, which is either 'pickup' or 'dropoff'.
+        - 'description': A string describing the feature.
+    """
+    features = []
+    for order in orders:
+        pickup_location = Point(order.pickup_latitude, order.pickup_longitude)
+        pickup_feature = create_point_feature(pickup_location, order.id, 'pickup')
+        features.append(pickup_feature)
+
+        dropoff_location = Point(order.dropoff_latitude, order.dropoff_longitude)
+        dropoff_feature = create_point_feature(dropoff_location, order.id, 'dropoff')
+        features.append(dropoff_feature)
+    return features
+
+
+def create_point_feature(location: Union[object, Dict[str, float]], order_id: str, order_type: str) -> Dict[str, Union[str, Dict[str, Union[str, List[float]]], Dict[str, str]]]:
+    """
+    Create a GeoJSON feature object representing a point.
+
+    Args:
+        location (object or dict): A location object with `x` and `y` coordinates or a dictionary with keys `x` and `y`
+            containing the coordinates.
+        order_id (str): The ID of the order.
+        order_type (str): The type of the order.
+
+    Returns:
+        A dictionary representing the GeoJSON feature object.
+
+    """
+    return {
+        'type': 'Feature',
+        'geometry': {
+            'type': 'Point',
+            'coordinates': [location.x, location.y]
+        },
+        'properties': {
+            'id': order_id,
+            'type': order_type,
+            'description': "Nada"
+        }
+    }
+
+def create_buttons(user_type: str, user: object, has_active_order: bool) -> List[Dict[str, str]]:
+    """
+    Create a list of buttons for the user interface.
+
+    Args:
+        user_type (str): The type of user. One of "customer", "driver", "anonymous", or "other".
+        user (object): The user object.
+        has_active_order (bool): A flag indicating whether the user has an active order.
+
+    Returns:
+        A list of dictionaries representing the buttons.
+
+    """
+    buttons = []
+    if user_type == "customer":
+        buttons = [
+            {'url': '/dashboard/history', 'label': 'See history'},
+            {'url': '/dashboard/modify_user', 'label': 'Update information'},
+            {'url': '/dashboard/add_car', 'label': 'Add car'},
+        ]
+        if has_active_order:
+            buttons.append(
+                {
+                    "url": '/dashboard/cancel_order',
+                    "label": 'Complete or cancel drive'
+                }
+            )
+    elif user_type == "driver":
+        is_available = user.driver.is_available if hasattr(user, "driver") else False
+        start_driving_url = '/dashboard/set_driver_available'
+        start_driving_label = 'Start driving'
+        buttons = [
+            {'url': '/dashboard/history', 'label': 'See history'},
+            {'url': '/dashboard/modify_user', 'label': 'Update information'},
+        ]
+        if user.driver.orders.filter(completed=False).exists():
+            buttons.extend([
+                {"url": '/dashboard/cancel_order',
+                 "label": "Cancel current engagement"},
+                {"url": '/dashboard/update_eta',
+                 "label": "Update ETA"},
+                ]
+            )
+        if is_available:
+            buttons.append(
+                {"url": '/dashboard/set_driver_unavailable',
+                 "label": "Stop driving"}
+            )
+        else:
+            buttons.extend(
+                [
+                    {'url': start_driving_url, 'label': start_driving_label},
+                ]
+            )
+    elif user_type == "anonymous":
         buttons = [
             {'url': '/login', 'label': 'Log in'},
             {'url': '/register', 'label': 'Register'},
         ]
-    return render(request, 'active_drivers.html', {"buttons": buttons,
-                                                   "is_customer": is_customer,
-                                                   "has_active_order": has_active_order,
-                                                   "is_driver": is_driver,
-                                                   "is_available": is_available,
-                                                   "orders": orders,
-                                                   "features": features,
-                                                   "cars": cars,
-                                                   "now": datetime.now().strftime('%Y-%m-%dT%H:%M'),
-                                                   "eta": eta,
-                                                   })
+    else:
+        buttons = [
+            {'url': '/logout', 'label': 'Logout'},
+        ]
+    return buttons
 
 @login_required
 @transaction.atomic
-def call_driver(request):
+def call_driver(request: HttpRequest) -> HttpResponse:
+    """
+    View function that handles a customer's request to book a ride with a driver.
+
+    Args:
+    - request: The HTTP request object.
+
+    Returns:
+    - An HTTP response object that redirects the user to the homepage upon successful booking of a ride.
+    """
     pickup_time_str = request.GET.get('time')
     departure = request.GET.get('departure')
     arrival = request.GET.get('arrival')
@@ -238,9 +304,17 @@ def call_driver(request):
     # Return a response, e.g. a redirect to a success page
     return redirect('index')
 
-
 @login_required
-def history(request):
+def history(request: HttpRequest) -> HttpResponse:
+    """
+    View function that displays a user's order history.
+
+    Args:
+    - request: The HTTP request object.
+
+    Returns:
+    - An HTTP response object that renders a template showing the user's order history.
+    """
     user = request.user
     if hasattr(request.user, 'customer'):
         orders = Order.objects.filter(customer=user.customer)
@@ -269,14 +343,32 @@ def history(request):
     return render(request, 'history.html', context)
 
 @login_required
-def set_driver_available(request):
+def set_driver_available(request: HttpRequest) -> HttpResponse:
+    """
+    View function that sets a driver's availability status to True.
+
+    Args:
+    - request: The HTTP request object.
+
+    Returns:
+    - An HTTP response object that redirects the user to the homepage.
+    """
     driver = request.user.driver
     driver.is_available = True
     driver.save()
     return redirect('index')
 
 @login_required
-def set_driver_unavailable(request):
+def set_driver_unavailable(request: HttpRequest) -> HttpResponse:
+    """
+    View function that sets a driver's availability status to False.
+
+    Args:
+    - request: The HTTP request object.
+
+    Returns:
+    - An HTTP response object that redirects the user to the homepage.
+    """
     driver = request.user.driver
     driver.is_available = False
     driver.save()
@@ -284,7 +376,16 @@ def set_driver_unavailable(request):
 
 @login_required
 @transaction.atomic
-def confirm_order(request):
+def confirm_order(request: HttpRequest) -> HttpResponse:
+    """
+    View function that confirms a driver's acceptance of an order and assigns the driver to the order.
+
+    Args:
+    - request: The HTTP request object.
+
+    Returns:
+    - An HTTP response object that redirects the user to the homepage upon successful confirmation of an order.
+    """
     order_id = request.GET['order_id']
     time_to_pickup = int(request.GET['time_to_pickup'])
     order = Order.objects.get(id=order_id)
@@ -297,7 +398,16 @@ def confirm_order(request):
 
 @login_required
 @transaction.atomic
-def cancel_order(request):
+def cancel_order(request: HttpRequest) -> HttpResponse:
+    """
+    View function that cancels an order and unassigns the driver from the order.
+
+    Args:
+    - request: The HTTP request object.
+
+    Returns:
+    - An HTTP response object that redirects the user to the homepage upon successful cancellation of an order.
+    """
     # get the current user
     user = request.user
 
@@ -311,6 +421,7 @@ def cancel_order(request):
             return HttpResponseBadRequest('No active order found.')
 
         order.driver = None
+        order.eta = None
         order.save()
 
         return redirect('index')
@@ -334,7 +445,16 @@ def cancel_order(request):
         return HttpResponseBadRequest('User is not a driver or customer.')
 
 @login_required
-def add_car(request):
+def add_car(request: HttpRequest) -> HttpResponse:
+    """
+    View function that allows a user to add a car to their profile.
+
+    Args:
+    - request: The HTTP request object.
+
+    Returns:
+    - An HTTP response object that renders a template showing a form to add a car.
+    """
     if request.method == 'POST':
         form = CarForm(request.POST)
         if form.is_valid():
@@ -347,7 +467,18 @@ def add_car(request):
     return render(request, 'add_car.html', {'form': form})
 
 @login_required
-def modify_car(request, car_id):
+def modify_car(request: HttpRequest, car_id: int) -> Union[HttpResponse, JsonResponse]:
+    """
+    View function that allows a user to modify a car in their profile.
+
+    Args:
+    - request: The HTTP request object.
+    - car_id: The ID of the car to be modified.
+
+    Returns:
+    - An HTTP response object that renders a template showing a form to modify a car, or
+    - A JSON response object with an error message if the user is not authorized to modify the car.
+    """
     car = get_object_or_404(Car, id=car_id)
     if car.customer.user == request.user:
         if request.method == 'POST':
@@ -361,7 +492,12 @@ def modify_car(request, car_id):
     return JsonResponse({'success': False, 'message': 'You are not authorized to modify this car.'})
 
 @login_required
-def modify_user(request):
+def modify_user(request: HttpRequest) -> Union[HttpResponse, JsonResponse]:
+    """
+    Allows a logged-in user to modify their account information.
+    If the user is a driver, updates their latitude, longitude, license number, and bank account information.
+    If the user is a customer, updates their saved payment information.
+    """
     user = request.user
     if request.method == 'POST':
         if hasattr(user, 'driver'):
@@ -398,7 +534,10 @@ def modify_user(request):
 
 @login_required
 @transaction.atomic
-def update_eta(request):
+def update_eta(request: HttpRequest) -> Union[HttpResponse, HttpResponseRedirect]:
+    """
+    Allows a logged-in driver to update the estimated time of arrival (ETA) for the order they are currently delivering.
+    """
     user = request.user
     order = get_object_or_404(Order, driver=user.driver, completed=False)
 
