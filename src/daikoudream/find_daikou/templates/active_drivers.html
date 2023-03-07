@@ -17,8 +17,12 @@
 </style>
 <h1>Active Drivers Map</h1>
 {% load static %}
-{% if is_customer and eta != None %}
-<p>The estimated time of arrival is {{ eta|date:"F j, Y H:i" }}.</p>
+{% if is_customer and has_active_order %}
+{% if eta != None %}
+<p>Your daikou is on the way! The estimated time of arrival is {{ eta|date:"F j, Y H:i" }}.</p>
+{% else %}
+<p>No driver currently headed your way.</p>
+{% endif %}
 {% endif %}
 <div id="map" style="width: 800px; height: 600px;"></div>
 <script type="text/javascript">
