@@ -86,14 +86,14 @@ DATABASES = {
     #     'HOST': '89.150.133.107',
     #     'PORT': '8008',
     # },
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'daikoudream',
-    #     'USER': 'daikoudreamuser',
-    #     'PASSWORD': 'mypassword',
-    #     'HOST': '10.0.0.254',
-    #     'PORT': '5432',
-    # }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'daikoudream',
+        'USER': 'daikoudreamuser',
+        'PASSWORD': 'mypassword',
+        'HOST': 'db',
+        'PORT': '5432',
+    }
 }
 
 if 'test' in sys.argv or 'test_coverage' in sys.argv: #Covers regular testing and django-coverage
