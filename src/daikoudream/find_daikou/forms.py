@@ -22,7 +22,8 @@ class CustomUserForm(forms.ModelForm):
 class CustomerForm(forms.ModelForm):
     class Meta:
         model = Customer
-        fields = ('saved_payment_info',)
+        fields = '__all__'
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,13 +42,11 @@ class CarForm(forms.ModelForm):
 class DriverForm(forms.ModelForm):
     class Meta:
         model = Driver
-        fields = ['is_available', 'latitude', 'longitude', 'license_number', 'bank_account_info']
+        fields = ['is_available', 'latitude', 'longitude']
         widgets = {
             'is_available': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'latitude': forms.NumberInput(attrs={'class': 'form-control'}),
             'longitude': forms.NumberInput(attrs={'class': 'form-control'}),
-            'license_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'bank_account_info': forms.TextInput(attrs={'class': 'form-control'})
         }
 
 class UserForm(forms.ModelForm):

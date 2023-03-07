@@ -430,9 +430,7 @@ def cancel_order(request: HttpRequest) -> HttpResponse:
             # the driver doesn't have an active order
             return HttpResponseBadRequest('No active order found.')
 
-        order.driver = None
-        order.eta = None
-        order.save()
+        order.unassign_driver()
 
         return redirect('index')
 
@@ -444,9 +442,7 @@ def cancel_order(request: HttpRequest) -> HttpResponse:
             # the customer doesn't have an active order
             return HttpResponseBadRequest('No active order found.')
 
-        order.completed = True
-        order.driver = None
-        order.save()
+        order.complete_order()
 
         return redirect('index')
 

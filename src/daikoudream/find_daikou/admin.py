@@ -5,13 +5,13 @@ class CustomUserAdmin(admin.ModelAdmin):
     list_display = ('username', 'email', 'is_staff')
 
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'saved_payment_info')
+    list_display = ['user']
 
 class CarAdmin(admin.ModelAdmin):
     list_display = ('make', 'model', 'year', 'customer')
 
 class DriverAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_available', 'latitude', 'longitude', 'license_number', 'bank_account_info')
+    list_display = ('user', 'is_available', 'latitude', 'longitude')
 
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('customer', 'driver', 'car', 'pickup_time', 'completed')

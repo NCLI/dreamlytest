@@ -16,7 +16,8 @@ class Customer(models.Model):
         on_delete=models.CASCADE,
         related_name='customer'
     )
-    saved_payment_info = models.CharField(max_length=4096)
+    def __str__(self):
+        return f"{self.user.name}"
 
 class Car(models.Model):
     """ A model to represent a car. """
@@ -29,6 +30,8 @@ class Car(models.Model):
         on_delete=models.CASCADE,
         related_name='cars'
     )
+    def __str__(self):
+        return f"{self.make} {self.model} {self.year}"
 
 class Driver(models.Model):
     """ A model to represent a driver. """
@@ -45,8 +48,6 @@ class Driver(models.Model):
     longitude = models.FloatField(
         default = 0.0
     )
-    license_number = models.CharField(max_length=50)
-    bank_account_info = models.CharField(max_length=4096)
     def __str__(self):
         return self.user.username
 
@@ -98,11 +99,11 @@ class Order(models.Model):
         self.save()
         return True
 
-
     def assign_driver(self, driver):
         self.driver = driver
         self.save()
 
     def unassign_driver(self):
         self.driver = None
+        self.eta = None
         self.save()

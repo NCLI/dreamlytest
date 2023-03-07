@@ -51,16 +51,13 @@ class IndexViewTestCase(TestCase):
         self.user0 = CustomUser.objects.create(username='testcust0')
         self.customer0 = Customer.objects.create(
             user=self.user0,
-            saved_payment_info="test payment info",
         )
         self.user1 = CustomUser.objects.create(username='testcust1')
         self.customer1 = Customer.objects.create(
             user=self.user1,
-            saved_payment_info="test payment info",
         )
         self.user2 = CustomUser.objects.create(username='testdriver')
-        self.driver = Driver.objects.create(user=self.user2, is_available=True, latitude=0.0, longitude=0.0,
-                                             license_number='ABC123', bank_account_info='test bank info')
+        self.driver = Driver.objects.create(user=self.user2, is_available=True, latitude=0.0, longitude=0.0)
         self.car0 = Car.objects.create(
             make="Toyota",
             model="Corolla",
@@ -156,13 +153,11 @@ class CustomerModelTest(TestCase):
         )
         self.customer = Customer.objects.create(
             user=self.user,
-            saved_payment_info="test payment info",
         )
 
     def test_create_customer(self):
         self.assertIsInstance(self.customer, Customer)
         self.assertEqual(self.customer.user, self.user)
-        self.assertEqual(self.customer.saved_payment_info, "test payment info")
 
 
 class CarModelTest(TestCase):
@@ -174,7 +169,6 @@ class CarModelTest(TestCase):
         )
         self.customer = Customer.objects.create(
             user=self.user,
-            saved_payment_info="test payment info",
         )
         self.car = Car.objects.create(
             make="Toyota",
@@ -193,15 +187,14 @@ class CarModelTest(TestCase):
 class DriverTestCase(TestCase):
     def setUp(self):
         self.user = CustomUser.objects.create(username='testdriver')
-        self.driver = Driver.objects.create(user=self.user, is_available=True, latitude=0.0, longitude=0.0,
-                                             license_number='ABC123', bank_account_info='test bank info')
+        self.driver = Driver.objects.create(user=self.user, is_available=True, latitude=0.0, longitude=0.0)
 
     def test_str(self):
         self.assertEqual(str(self.driver), 'testdriver')
 
     def test_assign_order(self):
         user = CustomUser.objects.create(username='testcustomer')
-        customer = Customer.objects.create(user=user, saved_payment_info='test payment info')
+        customer = Customer.objects.create(user=user)
         car = Car.objects.create(make='Test', model='Car', year=2022, customer=customer)
         order = Order.objects.create(customer=customer, car=car, pickup_latitude=0.0, pickup_longitude=0.0,
                                      dropoff_latitude=1.0, dropoff_longitude=1.0, pickup_time=timezone.now(),
@@ -215,18 +208,14 @@ class OrderModelTestCase(TestCase):
         # Create a user for the customer and assign it to a customer instance
         self.user0 = CustomUser.objects.create_user(username="testuser0", password="testpass0")
         self.user1 = CustomUser.objects.create_user(username="testuser1", password="testpass1")
-        self.customer0 = Customer.objects.create(user=self.user0, saved_payment_info="1234 5678 9101 1121")
-        self.customer1 = Customer.objects.create(user=self.user1, saved_payment_info="1234 5678 9101 1121")
+        self.customer0 = Customer.objects.create(user=self.user0)
+        self.customer1 = Customer.objects.create(user=self.user1)
 
         # Create a user for the driver and assign it to a driver instance
         self.user2 = CustomUser.objects.create_user(username="testuser2", password="testpass2")
-        self.driver0 = Driver.objects.create(user=self.user2, is_available=True, latitude=35.12345,
-                                              longitude=139.12345, license_number="123456",
-                                              bank_account_info="1234 5678 9101 1121")
+        self.driver0 = Driver.objects.create(user=self.user2, is_available=True, latitude=35.12345, longitude=139.12345)
         self.user3 = CustomUser.objects.create_user(username="testuser3", password="testpass3")
-        self.driver1 = Driver.objects.create(user=self.user3, is_available=True, latitude=35.12345,
-                                              longitude=139.12345, license_number="123456",
-                                              bank_account_info="1234 5678 9101 1121")
+        self.driver1 = Driver.objects.create(user=self.user3, is_available=True, latitude=35.12345, longitude=139.12345)
 
         # Create a car for the customer
         self.car0 = Car.objects.create(make="Toyota", model="Camry", year=2021, customer=self.customer0)
@@ -263,7 +252,7 @@ class OrderModelTestCase(TestCase):
     def test_car_belongs_to_customer(self):
         # Test that an order can only be associated with a car belonging to the customer
         self.user4 = CustomUser.objects.create_user(username="testuser4", password="testpass1")
-        self.customer2 = Customer.objects.create(user=self.user4, saved_payment_info="1234 5678 9101 1121")
+        self.customer2 = Customer.objects.create(user=self.user4)
         self.car2 = Car.objects.create(make="Nissan", model="Altima", year=2022, customer=self.customer2)
         self.order2 = Order.objects.create(customer=self.customer2, car=self.car2,
                                             pickup_latitude=35.12345, pickup_longitude=139.12345,
