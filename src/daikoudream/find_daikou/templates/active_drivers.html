@@ -236,15 +236,22 @@
                 confirmBtn.disabled = false;
                 confirmBtn.addEventListener('click', function() {
                   // Show pop-up to confirm selection
-                  let time = prompt("How many minutes will it take you to get to the pick-up point?")
-                  if (time != "" && time != null) {
-                    // Send coordinates to call_driver
-                    window.location.href = "{% url 'confirm_order' %}?order_id=" + orderId + "&time_to_pickup=" + time;
+                  let timeStr = prompt("How many minutes will it take you to get to the pick-up point?")
+                  if (/^\d+$/.test(timeStr)) {
+                    // the user entered a valid integer
+                    let time = parseInt(timeStr);
+                    if (time != "" && time != null) {
+                      // Send coordinates to call_driver
+                      window.location.href = "{% url 'confirm_order' %}?order_id=" + orderId + "&time_to_pickup=" + time;
+                    } else {
+                    }
                   } else {
+                    // The user did not enter a valid integer
                     // Unset variables and remove markers
                     selectedOrder = null;
                     map.removeLayer(markerLayer);
                     confirmBtn.disabled = true;
+                    alert("Please enter a valid integer.");
                   }
                 });
             });

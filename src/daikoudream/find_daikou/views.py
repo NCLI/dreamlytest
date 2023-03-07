@@ -123,6 +123,9 @@ def index(request):
                     }
                 )
                 has_active_order = True
+            active_orders = request.user.customer.orders.filter(driver=not None, completed=False)
+            if active_orders.exists():
+                eta = active_orders[0].eta
         elif is_driver:
             start_driving_url = '/dashboard/set_driver_available'
             start_driving_label = 'Start driving'

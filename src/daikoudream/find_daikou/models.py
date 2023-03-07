@@ -73,6 +73,7 @@ class Order(models.Model):
     dropoff_longitude = models.FloatField()
     pickup_time = models.DateTimeField()
     completed = models.BooleanField(default=False)
+    eta = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.completed:
