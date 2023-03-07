@@ -1,12 +1,13 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.test import TestCase, Client
+from django.test import TestCase, Client, RequestFactory
 from datetime import datetime, timedelta, timezone
 from django.utils import timezone
 from django.urls import reverse
 from find_daikou.models import CustomUser, Customer, Car, Driver, Order
 from find_daikou.forms import RegistrationForm
+from find_daikou.views import index
 
 class RegisterViewTest(TestCase):
 
@@ -44,6 +45,82 @@ class RegisterViewTest(TestCase):
         response = self.client.post(reverse('register'), data=data)
         self.assertContains(response, "This field is required")
 
+class IndexViewTestCase(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user0 = CustomUser.objects.create(username='testcust0')
+        self.customer0 = Customer.objects.create(
+            user=self.user0,
+            saved_payment_info="test payment info",
+        )
+        self.user1 = CustomUser.objects.create(username='testcust1')
+        self.customer1 = Customer.objects.create(
+            user=self.user1,
+            saved_payment_info="test payment info",
+        )
+        self.user2 = CustomUser.objects.create(username='testdriver')
+        self.driver = Driver.objects.create(user=self.user2, is_available=True, latitude=0.0, longitude=0.0,
+                                             license_number='ABC123', bank_account_info='test bank info')
+        self.car0 = Car.objects.create(
+            make="Toyota",
+            model="Corolla",
+            year=2021,
+            customer=self.customer0,
+        )
+        self.car1 = Car.objects.create(
+            make="Toyota",
+            model="Corolla",
+            year=2022,
+            customer=self.customer1,
+        )
+        self.order0 = Order.objects.create(customer=self.customer0, car=self.car0,
+                                            pickup_latitude=35.12345, pickup_longitude=139.12345,
+                                            dropoff_latitude=35.67890, dropoff_longitude=139.67890,
+                                            pickup_time=timezone.now(), completed=False)
+        self.order1 = Order.objects.create(customer=self.customer1, car=self.car1,
+                                            pickup_latitude=35.12345, pickup_longitude=139.12345,
+                                            dropoff_latitude=35.67890, dropoff_longitude=139.67890,
+                                            pickup_time=timezone.now(), completed=False)
+        self.url = reverse('index')
+
+    def test_customer_without_active_order(self):
+        request = self.factory.get(self.url)
+        request.user = self.user1
+        response = index(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '/dashboard/cancel_order/')
+
+    def test_customer_with_active_order(self):
+        self.order0.driver = self.driver
+        self.order0.save()
+        request = self.factory.get(self.url)
+        request.user = self.user0
+        response = index(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '/dashboard/cancel_order/')
+
+    def test_driver_without_active_order(self):
+        request = self.factory.get(self.url)
+        request.user = self.user2
+        response = index(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '/dashboard/cancel_order/')
+
+    def test_driver_with_active_order(self):
+        self.order0.driver = self.driver
+        self.order0.save()
+        request = self.factory.get(self.url)
+        request.user = self.user2
+        response = index(request)
+        print(response.content)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '/dashboard/cancel_order/')
+
+    def tearDown(self):
+        Customer.objects.all().delete()
+        Driver.objects.all().delete()
+        Car.objects.all().delete()
+        Order.objects.all().delete()
 
 class CustomUserModelTest(TestCase):
     def test_create_user(self):
