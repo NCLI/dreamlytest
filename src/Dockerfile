@@ -17,14 +17,6 @@ RUN ls -la
 
 WORKDIR /app/dreamlytest/daikoudream
 
-# Set environment variables
-ENV DJANGO_SETTINGS_MODULE=daikoudream.settings
-ENV PYTHONUNBUFFERED=1
-ENV POSTGRES_USER=myuser
-ENV POSTGRES_PASSWORD=mypassword
-ENV POSTGRES_DB=mydb
-ENV DATABASE_URL=postgis://myuser:mypassword@db:5432/mydb
-
 # Expose port 8000
 EXPOSE 8000
 
