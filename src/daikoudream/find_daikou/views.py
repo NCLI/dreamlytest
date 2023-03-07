@@ -1,12 +1,16 @@
+from datetime import datetime
+from time import strptime
+
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.gis.geos import Point
 from django.db import transaction
+from django.views.decorators.http import require_POST
 
-from find_daikou.models import Driver, Order
-from .forms import DriverForm, RegistrationForm
+from find_daikou.models import Driver, Order, Car
+from .forms import DriverForm, RegistrationForm, CarForm, CustomerForm
 from .models import CustomUser, Driver, Customer
 
 
@@ -41,7 +45,7 @@ def open_orders(request):
             'properties': {
                 'id': order.id,
                 'type': 'pickup',
-                'description': "Nada"
+                'description': "Point where you would like to go to."
             }
         }
         features.append(pickup_feature)
@@ -57,7 +61,7 @@ def open_orders(request):
             'properties': {
                 'id': order.id,
                 'type': 'dropoff',
-                'description': "Nada"
+                'description': "Point where you would like to be picked up."
             }
         }
         features.append(dropoff_feature)
@@ -93,10 +97,12 @@ def index(request):
     is_available = False
     orders = []
     features = []
+    cars =[]
 
     if request.user.is_authenticated:
         if hasattr(request.user, 'customer'):
             is_customer = True
+            cars = Car.objects.filter(customer=request.user.customer)
         elif hasattr(request.user, 'driver'):
             is_driver = True
             if request.user.driver.is_available:
@@ -106,13 +112,14 @@ def index(request):
         if is_customer:
             buttons = [
                 {'url': '/dashboard/history', 'label': 'See history'},
-                {'url': '/update_info', 'label': 'Update information'},
+                {'url': '/dashboard/modify_user', 'label': 'Update information'},
+                {'url': '/dashboard/add_car', 'label': 'Add car'},
             ]
             if request.user.customer.orders.filter(completed=False).exists():
                 buttons.append(
                     {
-                        "url": '/cancel_driver',
-                        "label": 'Cancel driver'
+                        "url": '/dashboard/cancel_order',
+                        "label": 'Complete or cancel drive'
                     }
                 )
                 has_active_order = True
@@ -121,7 +128,7 @@ def index(request):
             start_driving_label = 'Start driving'
             buttons = [
                 {'url': '/dashboard/history', 'label': 'See history'},
-                {'url': '/update_info', 'label': 'Update information'},
+                {'url': '/dashboard/modify_user', 'label': 'Update information'},
             ]
             if request.user.driver.orders.filter(completed=False).exists():
                 buttons.append(
@@ -192,22 +199,34 @@ def index(request):
                                                    "is_driver": is_driver,
                                                    "is_available": is_available,
                                                    "orders": orders,
-                                                   "features": features
+                                                   "features": features,
+                                                   "cars": cars,
+                                                   "now": datetime.now().strftime('%Y-%m-%dT%H:%M')
                                                    })
 
+@login_required
+@transaction.atomic
 def call_driver(request):
-    # Get the pick-up time
-    print(request)
-    pickup_time = request.GET.get('time')
-
-    # Get the departure and arrival coordinates from hidden inputs
+    pickup_time_str = request.GET.get('time')
     departure = request.GET.get('departure')
     arrival = request.GET.get('arrival')
+    car_id = request.GET.get('car')
 
-    # Print the received data
-    print(f"Pick-up time: {pickup_time}")
-    print(f"Departure: {departure}")
-    print(f"Arrival: {arrival}")
+    pickup_time = datetime.fromisoformat(pickup_time_str)
+    # Get the car object based on the car id
+    car_obj = get_object_or_404(Car, id=car_id)
+
+    # Create a new order instance with the received data
+    order = Order(customer=request.user.customer,
+                  pickup_time=pickup_time,
+                  pickup_latitude=departure.split(',')[0],
+                  pickup_longitude=departure.split(',')[1],
+                  dropoff_latitude=arrival.split(',')[0],
+                  dropoff_longitude=arrival.split(',')[1],
+                  car=car_obj)
+
+    # Save the order instance to the database
+    order.save()
 
     # Return a response, e.g. a redirect to a success page
     return redirect('index')
@@ -306,3 +325,66 @@ def cancel_order(request):
     else:
         # the user is neither a driver nor a customer
         return HttpResponseBadRequest('User is not a driver or customer.')
+
+@login_required
+def add_car(request):
+    if request.method == 'POST':
+        form = CarForm(request.POST)
+        if form.is_valid():
+            car = form.save(commit=False)
+            car.customer = request.user.customer
+            car.save()
+            return redirect('index')
+    else:
+        form = CarForm()
+    return render(request, 'add_car.html', {'form': form})
+
+@login_required
+def modify_car(request, car_id):
+    car = get_object_or_404(Car, id=car_id)
+    if car.customer.user == request.user:
+        if request.method == 'POST':
+            form = CarForm(request.POST, instance=car)
+            if form.is_valid():
+                form.save()
+                return redirect('index')
+        else:
+            form = CarForm(instance=car)
+        return render(request, 'modify_car.html', {'form': form})
+    return JsonResponse({'success': False, 'message': 'You are not authorized to modify this car.'})
+
+@login_required
+def modify_user(request):
+    user = request.user
+    if request.method == 'POST':
+        if hasattr(user, 'driver'):
+            user_obj = user.driver
+        elif hasattr(user, 'customer'):
+            user_obj = user.customer
+        else:
+            return JsonResponse({'success': False, 'message': 'User is not a driver or customer.'})
+
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+
+        if isinstance(user_obj, Driver):
+            user_obj.latitude = request.POST.get('latitude', user_obj.latitude)
+            user_obj.longitude = request.POST.get('longitude', user_obj.longitude)
+            user_obj.license_number = request.POST.get('license_number', user_obj.license_number)
+            user_obj.bank_account_info = request.POST.get('bank_account_info', user_obj.bank_account_info)
+        elif isinstance(user_obj, Customer):
+            user_obj.saved_payment_info = request.POST.get('saved_payment_info', user_obj.saved_payment_info)
+
+        user.save()
+        user_obj.save()
+        return redirect('index')
+    else:
+        if hasattr(user, 'customer'):
+            form = CustomerForm(instance=user.customer)
+        elif hasattr(user, 'driver'):
+            form = DriverForm(instance=user.driver)
+        else:
+            # If the user is not a Customer or a Driver, return an error message
+            return render(request, 'error.html', {'error': 'You must be a Customer or a Driver'})
+    return render(request, 'modify_user.html', {'form': form})

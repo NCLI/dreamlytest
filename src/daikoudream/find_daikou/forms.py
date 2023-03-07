@@ -1,11 +1,7 @@
 from django import forms
-from .models import Driver, CustomUser
+from .models import Driver, CustomUser, Car, Customer
 from django.contrib.auth.forms import UserCreationForm
-
-class DriverForm(forms.ModelForm):
-    class Meta:
-        model = Driver
-        fields = ['latitude', 'longitude', 'license_number', 'bank_account_info', 'is_available']
+from django.contrib.auth import get_user_model
 
 class RegistrationForm(UserCreationForm):
     CHOICES = [('customer', 'Customer'), ('driver', 'Driver')]
@@ -14,3 +10,64 @@ class RegistrationForm(UserCreationForm):
     class Meta:
         model = CustomUser
         fields = ['username', 'email', 'password1', 'password2', 'user_type']
+
+
+User = get_user_model()
+
+class CustomUserForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ('first_name', 'last_name', 'email')
+
+class CustomerForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = ('saved_payment_info',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.update(CustomUserForm(instance=self.instance.user).fields)
+
+class CarForm(forms.ModelForm):
+    class Meta:
+        model = Car
+        fields = ['make', 'model', 'year']
+        widgets = {
+            'make': forms.TextInput(attrs={'class': 'form-control'}),
+            'model': forms.TextInput(attrs={'class': 'form-control'}),
+            'year': forms.NumberInput(attrs={'class': 'form-control'})
+        }
+
+class DriverForm(forms.ModelForm):
+    class Meta:
+        model = Driver
+        fields = ['is_available', 'latitude', 'longitude', 'license_number', 'bank_account_info']
+        widgets = {
+            'is_available': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control'}),
+            'license_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'bank_account_info': forms.TextInput(attrs={'class': 'form-control'})
+        }
+
+class UserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'})
+        }
+
+class CustomerProfileForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = []
+        widgets = {}
+
+class DriverProfileForm(forms.ModelForm):
+    class Meta:
+        model = Driver
+        fields = []
+        widgets = {}

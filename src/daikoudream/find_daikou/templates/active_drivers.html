@@ -132,11 +132,20 @@
               var confirmBtn = document.getElementById('confirm-btn');
               confirmBtn.disabled = false;
               confirmBtn.addEventListener('click', function() {
+                // get the selected option element
+                var car = document.getElementsByName('car')[0];
+                var selectedOption = car.options[car.selectedIndex];
+
+                // get the value of the selected option
+                var selectedCarId = selectedOption.value;
+
                 // Show pop-up to confirm selection
-                let time = prompt("Confirm selection of departure: " + departure + " and arrival: " + arrival + "?\n\n" + "If correct, please enter a pick-up time.")
-                if (time != "" && time != null) {
+
+                var dateTimePicker = document.getElementById('pickup-time')
+                var time = dateTimePicker.value;
+                if (confirm('Confirm selection of departure: ' + departure + ' and arrival: ' + arrival + '?\n\n')) {
                   // Send coordinates to call_driver
-                  window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival + "&time=" + time;
+                  window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival + "&time=" + time + "&car=" + selectedCarId;
                 } else {
                   // Unset variables and remove markers
                   departure = null;
@@ -268,4 +277,15 @@
   {% endfor %}
 </ul>
 {% endif %}
+
+{% if is_customer and not has_active_order %}
+  <select name="car">
+    {% for car in cars %}
+    <option value="{{ car.id }}">{{ car.make }} {{ car.model }} ({{ car.year }})</option>
+    {% endfor %}
+  </select>
+  <label for="pickup-time">Pick-up Time:</label>
+  <input type="datetime-local" id="pickup-time" name="pickup_time" value="{{ now }}">
+{% endif %}
+
 {% endblock %}

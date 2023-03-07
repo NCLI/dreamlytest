@@ -83,6 +83,9 @@ class Order(models.Model):
                if existing_orders_driver.exists():
                    raise ValidationError('A driver can only have one incomplete order at a time.')
             existing_orders_user = Order.objects.filter(customer=self.customer, completed=False).exclude(id=self.id)
+            # check if the car belongs to the user associated with the order
+            if self.car not in self.customer.cars.all():
+                raise ValidationError('The selected car does not belong to the customer.')
             if existing_orders_user.exists():
                 raise ValidationError('A customer can only have one incomplete order at a time.')
         super().save(*args, **kwargs)
