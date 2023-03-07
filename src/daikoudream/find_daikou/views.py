@@ -31,6 +31,27 @@ def available_drivers(request):
 
     return JsonResponse(data)
 
+def available_drivers(request):
+    assigned_driver = None
+    if request.user.is_authenticated:
+        try:
+            order = Order.objects.get(customer=request.user.customer, completed=False)
+            assigned_driver = order.driver
+        except Order.DoesNotExist:
+            pass
+
+    drivers = Driver.objects.filter(is_available=True)
+    driver_points = [{'type': 'Feature',
+                      'geometry': {'type': 'Point', 'coordinates': [d.latitude, d.longitude]},
+                      'properties': {'name': d.user.username, 'is_assigned': d == assigned_driver }} for d in drivers]
+
+    data = {
+        'type': 'FeatureCollection',
+        'features': driver_points
+    }
+
+    return JsonResponse(data)
+
 def register(request: HttpRequest) -> Union[HttpResponse, HttpResponseRedirect]:
     """
     A view responsible for user registration.

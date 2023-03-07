@@ -7,272 +7,287 @@
 
 {% block content %}
 <style>
- .ol-attribution {
-   position: absolute;
-   bottom: 10px;
-   left: 10px;
-   font-size: 12px;
-   max-width: calc(100% - 20px);
- }
+    .ol-attribution {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        font-size: 12px;
+        max-width: calc(100% - 20px);
+    }
 </style>
-<h1>Active Drivers Map</h1>
+<h1>Welcome to Dream Daikou</h1>
 {% load static %}
 {% if is_customer and has_active_order %}
 {% if eta != None %}
-<p>Your daikou is on the way! The estimated time of arrival is {{ eta|date:"F j, Y H:i" }}.</p>
+<p>Your daikou is on the way! Their estimated time of arrival is {{ eta|date:"F j, Y H:i" }}.</p>
 {% else %}
-<p>No driver currently headed your way.</p>
+<p>No daikou currently headed your way, but one is sure to accept soon!</p>
 {% endif %}
 {% endif %}
 <div id="map" style="width: 800px; height: 600px;"></div>
 <script type="text/javascript">
-    var departure, arrival;
-    // Create a vector source for the active drivers
-    var drivers = new ol.source.Vector({
-        url: '{% url "driverlist" %}',
-        format: new ol.format.GeoJSON()
+var departure, arrival;
+// Create a vector source for the active drivers
+var drivers = new ol.source.Vector({
+    url: '{% url "driverlist" %}',
+    format: new ol.format.GeoJSON()
+});
+
+// Get the user's location using the Geolocation API
+navigator.geolocation.getCurrentPosition(function(position) {
+    var userLocation = ol.proj.fromLonLat([position.coords.longitude, position.coords.latitude]);
+    // Create a vector source for the user location
+    var userLocationSource = new ol.source.Vector({
+        features: [
+            new ol.Feature({
+                geometry: new ol.geom.Point(userLocation)
+            })
+        ]
     });
 
-    // Get the user's location using the Geolocation API
-    navigator.geolocation.getCurrentPosition(function(position) {
-        var userLocation = ol.proj.fromLonLat([position.coords.longitude, position.coords.latitude]);
-        // Create a vector source for the user location
-        var userLocationSource = new ol.source.Vector({
-            features: [
-                new ol.Feature({
-                    geometry: new ol.geom.Point(userLocation)
-                })
-            ]
-        });
-
-        var features = {{ features|safe }};
-        var time = "";
-        // Add the user location and driver markers to the map
-        var map = new ol.Map({
-            target: 'map',
-           // controls: ol.control.defaults({ attribution: false }),
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
-                }),
-                new ol.layer.Vector({
-                    source: drivers,
-                    // Define the style for the driver markers
-                    style: new ol.style.Style({
+    var features = {{ features|safe }};
+    var time = "";
+    // Add the user location and driver markers to the map
+    var map = new ol.Map({
+        target: 'map',
+        // controls: ol.control.defaults({ attribution: false }),
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.OSM()
+            }),
+            new ol.layer.Vector({
+              source: drivers,
+              // Define the style function for the driver markers
+              style: function(feature) {
+                  var color;
+                  if (feature.getProperties().is_assigned) {
+                      color = 'green';
+                      radius = 8;
+                  } else {
+                      color = 'lightgreen';
+                      radius = 4;
+                  }
+                  return new ol.style.Style({
                       image: new ol.style.Circle({
-                        radius: 4,
-                        fill: new ol.style.Fill({color: 'lightgreen'}),
-                        stroke: new ol.style.Stroke({color: 'white', width: 2})
-                      })
+                          radius: radius,
+                          fill: new ol.style.Fill({color: color}),
+                          stroke: new ol.style.Stroke({color: 'white', width: 2})
                     })
-                }),
-                new ol.layer.Vector({
-                    source: userLocationSource,
-                    // Define the style for the user location marker
-                    style: new ol.style.Style({
-                        image: new ol.style.Circle({
-                            radius: 6,
-                            fill: new ol.style.Fill({color: 'blue'}),
-                            stroke: new ol.style.Stroke({color: 'white', width: 2})
-                        })
+                  });
+                }
+            }),
+            new ol.layer.Vector({
+                source: userLocationSource,
+                // Define the style for the user location marker
+                style: new ol.style.Style({
+                    image: new ol.style.Circle({
+                        radius: 6,
+                        fill: new ol.style.Fill({color: 'blue'}),
+                        stroke: new ol.style.Stroke({color: 'white', width: 2})
                     })
                 })
-            ],
-            view: new ol.View({
-                center: userLocation,
-                zoom: 10
             })
-        });
-        // Handle the click event on the map to set the departure and arrival points
-        {% if is_customer %}
-        {% if not has_active_order %}
-          // Declare default marker style
-          var defaultStyle = new ol.style.Style({
-            image: new ol.style.Circle({
-              radius: 6,
-              fill: new ol.style.Fill({color: 'white'}),
-              stroke: new ol.style.Stroke({color: 'black', width: 2})
-            })
-          });
+        ],
+        view: new ol.View({
+            center: userLocation,
+            zoom: 10
+        })
+    });
+    // Handle the click event on the map to set the departure and arrival points
+    {% if is_customer and not has_active_order %}
+    // Declare default marker style
+    var defaultStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+            radius: 6,
+            fill: new ol.style.Fill({color: 'white'}),
+            stroke: new ol.style.Stroke({color: 'black', width: 2})
+        })
+    });
 
-          // Initialize variables
-          var departure = null;
-          var arrival = null;
-          var departureFeature = null;
-          var arrivalFeature = null;
-          var vectorSource = new ol.source.Vector();
-          var vectorLayer = new ol.layer.Vector({
-            source: vectorSource
-          });
-          map.addLayer(vectorLayer);
+    // Initialize variables
+    var departure = null;
+    var arrival = null;
+    var departureFeature = null;
+    var arrivalFeature = null;
+    var vectorSource = new ol.source.Vector();
+    var vectorLayer = new ol.layer.Vector({
+        source: vectorSource
+    });
+    map.addLayer(vectorLayer);
 
-          // Add click handler
-          map.on('singleclick', function(event) {
-            var coordinate = event.coordinate;
-            var lonLat = ol.proj.toLonLat(coordinate);
-            var feature = new ol.Feature({
-              geometry: new ol.geom.Point(coordinate)
-            });
-            if (!departure) {
-              departure = lonLat;
-              departureFeature = feature;
-              departureFeature.setStyle(new ol.style.Style({
-                image: new ol.style.Circle({
+    // Add click handler
+    map.on('singleclick', function(event) {
+      var coordinate = event.coordinate;
+      var lonLat = ol.proj.toLonLat(coordinate);
+      var feature = new ol.Feature({
+        geometry: new ol.geom.Point(coordinate)
+      });
+      if (!departure) {
+          departure = lonLat;
+          departureFeature = feature;
+          departureFeature.setStyle(new ol.style.Style({
+              image: new ol.style.Circle({
                   radius: 6,
                   fill: new ol.style.Fill({color: 'white'}),
                   stroke: new ol.style.Stroke({color: 'green', width: 2})
-                })
-              }));
-              vectorSource.addFeature(departureFeature);
-            } else if (!arrival) {
-              arrival = lonLat;
-              arrivalFeature = feature;
-              arrivalFeature.setStyle(new ol.style.Style({
-                image: new ol.style.Circle({
+              })
+        }));
+        vectorSource.addFeature(departureFeature);
+      }
+      else if (!arrival) {
+          arrival = lonLat;
+          arrivalFeature = feature;
+          arrivalFeature.setStyle(new ol.style.Style({
+              image: new ol.style.Circle({
                   radius: 6,
                   fill: new ol.style.Fill({color: 'white'}),
                   stroke: new ol.style.Stroke({color: 'red', width: 2})
-                })
-              }));
-              vectorSource.addFeature(arrivalFeature);
-              // Add the confirm button
-              var confirmBtn = document.getElementById('confirm-btn');
-              confirmBtn.disabled = false;
-              confirmBtn.addEventListener('click', function() {
-                // get the selected option element
-                var car = document.getElementsByName('car')[0];
-                var selectedOption = car.options[car.selectedIndex];
+              })
+          }));
+          vectorSource.addFeature(arrivalFeature);
+          // Add the confirm button
+          var confirmBtn = document.getElementById('confirm-btn');
+          confirmBtn.disabled = false;
+          confirmBtn.addEventListener('click', function() {
+              // get the selected option element
+              var car = document.getElementsByName('car')[0];
+              var selectedOption = car.options[car.selectedIndex];
 
-                // get the value of the selected option
-                var selectedCarId = selectedOption.value;
+              // get the value of the selected option
+              var selectedCarId = selectedOption.value;
 
-                // Show pop-up to confirm selection
+              // Show pop-up to confirm selection
 
-                var dateTimePicker = document.getElementById('pickup-time')
-                var time = dateTimePicker.value;
-                if (confirm('Confirm selection of departure: ' + departure + ' and arrival: ' + arrival + '?\n\n')) {
+              var dateTimePicker = document.getElementById('pickup-time')
+              var time = dateTimePicker.value;
+              if (confirm('Confirm selection of departure: ' + departure + ' and arrival: ' + arrival + '?\n\n')) {
                   // Send coordinates to call_driver
                   window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival + "&time=" + time + "&car=" + selectedCarId;
-                } else {
+              }
+              else {
                   // Unset variables and remove markers
                   departure = null;
                   arrival = null;
                   vectorSource.removeFeature(departureFeature);
                   vectorSource.removeFeature(arrivalFeature);
                   confirmBtn.disabled = true;
-                }
-              });
-            }
+              }
           });
-        {% endif %}
-      {% endif %}
+      }
+    });
+    {% endif %}
 
-        {% if is_driver and is_available %}
-        var selectedOrder = null;
-        var orderLinks = document.querySelectorAll('a.order');
+    {% if is_driver and is_available %}
+    var selectedOrder = null;
+    var orderLinks = document.querySelectorAll('a.order');
 
-        orderLinks.forEach(function(link) {
-            link.addEventListener('click', function(event) {
-                event.preventDefault();
-                if (selectedOrder !== null) {
-                    // Deselect previous order
-                    document.querySelector('a.order[data-id="' + selectedOrder + '"]').classList.remove('selected');
-                }
+    orderLinks.forEach(function(link) {
+        link.addEventListener('click', function(event) {
+            event.preventDefault();
+            if (selectedOrder !== null) {
+                // Deselect previous order
+                document.querySelector('a.order[data-id="' + selectedOrder + '"]').classList.remove('selected');
+            }
 
-                var orderId = this.getAttribute('data-id');
-                selectedOrder = orderId;
-                this.classList.add('selected');
+            var orderId = this.getAttribute('data-id');
+            selectedOrder = orderId;
+            this.classList.add('selected');
 
-                var pickupFeature = features.find(function(feature) {
-                    return feature.properties.id == orderId && feature.properties.type == 'pickup';
-                });
-                var dropoffFeature = features.find(function(feature) {
-                    return feature.properties.id == orderId && feature.properties.type == 'dropoff';
-                });
+            var pickupFeature = features.find(function(feature) {
+                return feature.properties.id == orderId && feature.properties.type == 'pickup';
+            });
+            var dropoffFeature = features.find(function(feature) {
+                return feature.properties.id == orderId && feature.properties.type == 'dropoff';
+            });
 
-                var pickupCoordinates = pickupFeature.geometry.coordinates;
-                var dropoffCoordinates = dropoffFeature.geometry.coordinates;
+            var pickupCoordinates = pickupFeature.geometry.coordinates;
+            var dropoffCoordinates = dropoffFeature.geometry.coordinates;
 
-                // Create markers
-                var pickupMarker = new ol.Feature({
-                    geometry: new ol.geom.Point(ol.proj.fromLonLat(pickupCoordinates))
-                });
-                var dropoffMarker = new ol.Feature({
-                    geometry: new ol.geom.Point(ol.proj.fromLonLat(dropoffCoordinates))
-                });
+            // Create markers
+            var pickupMarker = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(pickupCoordinates))
+            });
+            var dropoffMarker = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(dropoffCoordinates))
+            });
 
-              var departureFeatureStyle = new ol.style.Style({
-                image: new ol.style.Circle({
+          var departureFeatureStyle = new ol.style.Style({
+              image: new ol.style.Circle({
                   radius: 6,
                   fill: new ol.style.Fill({color: 'white'}),
                   stroke: new ol.style.Stroke({color: 'green', width: 2})
-                })
-            });
-              var arrivalFeatureStyle = new ol.style.Style({
-                image: new ol.style.Circle({
+              })
+          });
+          var arrivalFeatureStyle = new ol.style.Style({
+              image: new ol.style.Circle({
                   radius: 6,
                   fill: new ol.style.Fill({color: 'white'}),
                   stroke: new ol.style.Stroke({color: 'red', width: 2})
-                })
-              });
+              })
+          });
 
-                pickupMarker.setStyle(departureFeatureStyle);
-                dropoffMarker.setStyle(arrivalFeatureStyle);
+          pickupMarker.setStyle(departureFeatureStyle);
+          dropoffMarker.setStyle(arrivalFeatureStyle);
 
-                // Add markers to map
-                var markerSource = new ol.source.Vector({
-                    features: [pickupMarker, dropoffMarker]
-                });
+          // Add markers to map
+          var markerSource = new ol.source.Vector({
+              features: [pickupMarker, dropoffMarker]
+          });
 
-                var markerLayer = new ol.layer.Vector({
-                    source: markerSource
-                });
+          var markerLayer = new ol.layer.Vector({
+              source: markerSource
+          });
 
-                map.addLayer(markerLayer);
+          map.addLayer(markerLayer);
 
-              // Zoom to show markers
-              var extent = markerSource.getExtent();
-              map.getView().fit(extent, {
-                padding: [50, 50, 50, 50],
-                duration: 500
-              });
+          // Zoom to show markers
+          var extent = markerSource.getExtent();
+          map.getView().fit(extent, {
+              padding: [50, 50, 50, 50],
+              duration: 500
+          });
 
-                // Enable confirm button
-
-                var confirmBtn = document.getElementById('confirm-btn');
-                confirmBtn.disabled = false;
-                confirmBtn.addEventListener('click', function() {
-                  // Show pop-up to confirm selection
-                  let timeStr = prompt("How many minutes will it take you to get to the pick-up point?")
-                  if (/^\d+$/.test(timeStr)) {
+            // Enable confirm button
+            var confirmBtn = document.getElementById('confirm-btn');
+            confirmBtn.disabled = false;
+            confirmBtn.addEventListener('click', function() {
+                // Show pop-up to confirm selection
+                let timeStr = prompt("How many minutes will it take you to get to the pick-up point?")
+                if (/^\d+$/.test(timeStr)) {
                     // the user entered a valid integer
                     let time = parseInt(timeStr);
                     if (time != "" && time != null) {
-                      // Send coordinates to call_driver
-                      window.location.href = "{% url 'confirm_order' %}?order_id=" + orderId + "&time_to_pickup=" + time;
-                    } else {
+                        // Send coordinates to call_driver
+                        window.location.href = "{% url 'confirm_order' %}?order_id=" + orderId + "&time_to_pickup=" + time;
                     }
-                  } else {
+                    else {
+                        // The user did not enter a valid time
+                        // Unset variables and remove markers
+                        selectedOrder = null;
+                        map.removeLayer(markerLayer);
+                        confirmBtn.disabled = true;
+                        alert("Please enter a time.");
+                    }
+                }
+                else {
                     // The user did not enter a valid integer
                     // Unset variables and remove markers
                     selectedOrder = null;
                     map.removeLayer(markerLayer);
                     confirmBtn.disabled = true;
                     alert("Please enter a valid integer.");
-                  }
-                });
+                }
             });
         });
-      {% endif %}
-
-
     });
+    {% endif %}
+});
 </script>
 {% if buttons %}
 <div class="btn-group" role="group" aria-label="Basic example">
-  {% for button in buttons %}
-  <a href="{{ button.url }}" class="btn btn-primary" {% if button.disabled %}disabled{% endif %}>{{ button.label }}</a>
-  {% endfor %}
+{% for button in buttons %}
+<a href="{{ button.url }}" class="btn btn-primary" {% if button.disabled %}disabled{% endif %}>{{ button.label }}</a>
+{% endfor %}
 </div>
 {% else %}
 <p>No buttons available</p>
@@ -282,24 +297,23 @@
 {% endif %}
 {% if is_driver and is_available %}
 <ul>
-  {% for order in orders %}
-  <li>
+{% for order in orders %}
+<li>
     <a href="#" class="order" data-id="{{ order.id }}">
-      Order #{{ order.id }}
+        Order #{{ order.id }}
     </a>
-  </li>
-  {% endfor %}
+</li>
+{% endfor %}
 </ul>
 {% endif %}
 
 {% if is_customer and not has_active_order %}
-  <select name="car">
-    {% for car in cars %}
-    <option value="{{ car.id }}">{{ car.make }} {{ car.model }} ({{ car.year }})</option>
-    {% endfor %}
-  </select>
-  <label for="pickup-time">Pick-up Time:</label>
-  <input type="datetime-local" id="pickup-time" name="pickup_time" value="{{ now }}">
+    <select name="car">
+        {% for car in cars %}
+        <option value="{{ car.id }}">{{ car.make }} {{ car.model }} ({{ car.year }})</option>
+        {% endfor %}
+    </select>
+    <label for="pickup-time">Pick-up Time:</label>
+    <input type="datetime-local" id="pickup-time" name="pickup_time" value="{{ now }}">
 {% endif %}
-
 {% endblock %}
