@@ -10,6 +10,7 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.contrib.gis.geos import Point
 from django.db import transaction
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.db.models.query import QuerySet
 
@@ -32,7 +33,6 @@ def available_drivers(request):
     return JsonResponse(data)
 
 def available_drivers(request):
-    assigned_driver = None
     if request.user.is_authenticated:
         try:
             order = Order.objects.get(customer=request.user.customer, completed=False)
@@ -156,6 +156,7 @@ def get_user_type(user: Any) -> str:
 def get_active_order(orders: QuerySet) -> Optional[Order]:
     """
     Return the first active order in the given query set of orders.
+    Safeguard, just in case a user magically manages to have two active orders.
 
     Args:
     - orders: A query set of orders.
@@ -221,7 +222,7 @@ def create_point_feature(location: Union[object, Dict[str, float]], order_id: st
         'properties': {
             'id': order_id,
             'type': order_type,
-            'description': "Nada"
+            'description': "Pointy"
         }
     }
 
@@ -241,54 +242,53 @@ def create_buttons(user_type: str, user: object, has_active_order: bool) -> List
     buttons = []
     if user_type == "customer":
         buttons = [
-            {'url': '/dashboard/history', 'label': 'See history'},
-            {'url': '/dashboard/add_car', 'label': 'Add car'},
-            {'url': '/dashboard/modify_user', 'label': 'Update information'},
+            {'url': reverse('history'), 'label': 'See history'},
+            {'url': reverse('add_car'), 'label': 'Add car'},
+            {'url': reverse('modify_user'), 'label': 'Update information'},
         ]
         if has_active_order:
             buttons.append(
                 {
-                    "url": '/dashboard/cancel_order',
+                    "url": reverse('cancel_order'),
                     "label": 'Complete or cancel drive'
                 }
             )
     elif user_type == "driver":
         is_available = user.driver.is_available if hasattr(user, "driver") else False
-        start_driving_url = '/dashboard/set_driver_available'
-        start_driving_label = 'Start driving'
         buttons = [
-            {'url': '/dashboard/history', 'label': 'See history'},
-            {'url': '/dashboard/modify_user', 'label': 'Update information'},
+            {'url': reverse('history'), 'label': 'See history'},
+            {'url': reverse('modify_user'), 'label': 'Update information'},
         ]
         if user.driver.orders.filter(completed=False).exists():
             buttons.extend([
-                {"url": '/dashboard/cancel_order',
+                {"url": reverse('cancel_order'),
                  "label": "Cancel current engagement"},
-                {"url": '/dashboard/update_eta',
+                {"url": reverse('update_eta'),
                  "label": "Update ETA"},
                 ]
             )
         if is_available:
             buttons.append(
-                {"url": '/dashboard/set_driver_unavailable',
+                {"url": reverse('set_driver_unavailable'),
                  "label": "Stop driving"}
             )
         else:
             buttons.extend(
                 [
-                    {'url': start_driving_url, 'label': start_driving_label},
+                    {"url": reverse('set_driver_available'),
+                    "label": "Start driving"}
                 ]
             )
     if user_type == "anonymous":
         buttons = [
-            {'url': '/login', 'label': 'Log in'},
-            {'url': '/register', 'label': 'Register'},
+            {'url': reverse('login'), 'label': 'Log in'},
+            {'url': reverse('register'), 'label': 'Register'},
         ]
 
 
     else:
         buttons.append(
-            {'url': '/logout', 'label': 'Logout'},
+            {'url': reverse('logout'), 'label': 'Logout'},
         )
     return buttons
 
