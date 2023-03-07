@@ -29,7 +29,7 @@ def available_drivers(request):
 
 def open_orders(request):
     # Retrieve all open orders from the database
-    orders = Order.objects.filter(driver=None)
+    orders = Order.objects.filter(driver=None, completed=False)
 
     # Create a list of features for the OpenLayers map
     features = []
@@ -147,7 +147,7 @@ def index(request):
                     ]
                 )
             # Retrieve all open orders from the database
-            orders = Order.objects.filter(driver=None)
+            orders = Order.objects.filter(driver=None, completed=False)
 
             # Create a list of features for the OpenLayers map
             features = []
