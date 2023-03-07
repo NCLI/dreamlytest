@@ -25,7 +25,7 @@ jobs:
       run: |
         #apt install -y postgresql-client gdal-bin libgeos-dev libgdal-dev python3-psycopg2 graphviz-dev postgresql-contrib
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r src/requirements.txt
     - name: Run Tests
       run: |
         python manage.py test
