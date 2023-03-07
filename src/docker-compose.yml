@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data/
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      DJANGO_SETTINGS_MODULE: daikoudream.settings
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb
+    volumes:
+      - .:/app/dreamlytest
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+volumes:
+  postgres_data:

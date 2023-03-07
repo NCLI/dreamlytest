@@ -1,0 +1,8 @@
+FROM postgres
+
+# Install PostGIS extension
+RUN apt-get update && \
+    apt-get install -y postgis
+
+# Copy custom configuration file
+#COPY ./postgresql.conf /etc/postgresql/postgresql.conf
