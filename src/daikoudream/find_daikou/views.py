@@ -88,7 +88,6 @@ def index(request: HttpRequest) -> HttpResponse:
             features = create_order_features(orders)
 
         # Set button labels and URLs
-        buttons = create_buttons(user_type, request.user, has_active_order)
 
         # Set active order details
         if is_customer:
@@ -98,6 +97,7 @@ def index(request: HttpRequest) -> HttpResponse:
                 eta = active_order.eta
         elif is_driver:
             active_order = get_active_order(request.user.driver.orders)
+        buttons = create_buttons(user_type, request.user, has_active_order)
 
     else:
         buttons = create_buttons('anonymous', None, False)
