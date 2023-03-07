@@ -91,7 +91,7 @@ DATABASES = {
         'NAME': 'daikoudream',
         'USER': 'daikoudreamuser',
         'PASSWORD': 'mypassword',
-        'HOST': '10.0.0.254',
+        'HOST': 'db',
         'PORT': '5432',
     }
 }
