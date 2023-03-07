@@ -502,7 +502,7 @@ def modify_user(request: HttpRequest) -> Union[HttpResponse, JsonResponse]:
     """
     Allows a logged-in user to modify their account information.
     If the user is a driver, updates their latitude, longitude, license number, and bank account information.
-    If the user is a customer, updates their saved payment information.
+    If the user is a customer, just updates their name and email.
     """
     user = request.user
     if request.method == 'POST':
@@ -522,8 +522,6 @@ def modify_user(request: HttpRequest) -> Union[HttpResponse, JsonResponse]:
             user_obj.longitude = request.POST.get('longitude', user_obj.longitude)
             user_obj.license_number = request.POST.get('license_number', user_obj.license_number)
             user_obj.bank_account_info = request.POST.get('bank_account_info', user_obj.bank_account_info)
-        elif isinstance(user_obj, Customer):
-            user_obj.saved_payment_info = request.POST.get('saved_payment_info', user_obj.saved_payment_info)
 
         user.save()
         user_obj.save()

@@ -74,10 +74,6 @@ class IndexViewTestCase(TestCase):
                                             pickup_latitude=35.12345, pickup_longitude=139.12345,
                                             dropoff_latitude=35.67890, dropoff_longitude=139.67890,
                                             pickup_time=timezone.now(), completed=False)
-        self.order1 = Order.objects.create(customer=self.customer1, car=self.car1,
-                                            pickup_latitude=35.12345, pickup_longitude=139.12345,
-                                            dropoff_latitude=35.67890, dropoff_longitude=139.67890,
-                                            pickup_time=timezone.now(), completed=False)
         self.url = reverse('index')
 
     def test_customer_without_active_order(self):
@@ -85,7 +81,8 @@ class IndexViewTestCase(TestCase):
         request.user = self.user1
         response = index(request)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, '/dashboard/cancel_order/')
+        self.assertNotContains(response, '/cancel_order/')
+        self.assertContains(response, '<select name="car">')
 
     def test_customer_with_active_order(self):
         self.order0.driver = self.driver
@@ -94,14 +91,17 @@ class IndexViewTestCase(TestCase):
         request.user = self.user0
         response = index(request)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '/dashboard/cancel_order/')
+        self.assertContains(response, '/cancel_order/')
+        self.assertNotContains(response, '<select name="car">')
 
     def test_driver_without_active_order(self):
         request = self.factory.get(self.url)
         request.user = self.user2
         response = index(request)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, '/dashboard/cancel_order/')
+        self.assertNotContains(response, '/cancel_order/')
+        self.assertNotContains(response, '<select name="car">')
+        self.assertContains(response, 'selectedOrder')
 
     def test_driver_with_active_order(self):
         self.order0.driver = self.driver
@@ -110,7 +110,8 @@ class IndexViewTestCase(TestCase):
         request.user = self.user2
         response = index(request)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '/dashboard/cancel_order/')
+        self.assertContains(response, '/cancel_order/')
+        self.assertNotContains(response, '<select name="car">')
 
     def tearDown(self):
         Customer.objects.all().delete()
