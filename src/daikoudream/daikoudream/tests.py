@@ -112,7 +112,6 @@ class IndexViewTestCase(TestCase):
         request = self.factory.get(self.url)
         request.user = self.user2
         response = index(request)
-        print(response.content)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '/dashboard/cancel_order/')
 
