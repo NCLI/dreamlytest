@@ -6,6 +6,7 @@ from time import strptime
 from django.http import JsonResponse, HttpResponseBadRequest, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from django.contrib import messages
 from django.contrib.gis.geos import Point
 from django.db import transaction
@@ -99,7 +100,7 @@ def index(request: HttpRequest) -> HttpResponse:
             active_order = get_active_order(request.user.driver.orders)
 
     else:
-        buttons = create_buttons('anonymous')
+        buttons = create_buttons('anonymous', None, False)
 
     return render(request, 'active_drivers.html', {
         "buttons": buttons,
@@ -220,8 +221,8 @@ def create_buttons(user_type: str, user: object, has_active_order: bool) -> List
     if user_type == "customer":
         buttons = [
             {'url': '/dashboard/history', 'label': 'See history'},
-            {'url': '/dashboard/modify_user', 'label': 'Update information'},
             {'url': '/dashboard/add_car', 'label': 'Add car'},
+            {'url': '/dashboard/modify_user', 'label': 'Update information'},
         ]
         if has_active_order:
             buttons.append(
@@ -257,15 +258,17 @@ def create_buttons(user_type: str, user: object, has_active_order: bool) -> List
                     {'url': start_driving_url, 'label': start_driving_label},
                 ]
             )
-    elif user_type == "anonymous":
+    if user_type == "anonymous":
         buttons = [
             {'url': '/login', 'label': 'Log in'},
             {'url': '/register', 'label': 'Register'},
         ]
+
+
     else:
-        buttons = [
+        buttons.append(
             {'url': '/logout', 'label': 'Logout'},
-        ]
+        )
     return buttons
 
 @login_required

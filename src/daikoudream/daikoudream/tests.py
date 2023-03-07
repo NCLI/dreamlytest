@@ -1,8 +1,48 @@
+import json
+
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, Client
 from datetime import datetime, timedelta, timezone
 from django.utils import timezone
+from django.urls import reverse
 from find_daikou.models import CustomUser, Customer, Car, Driver, Order
+from find_daikou.forms import RegistrationForm
+
+class RegisterViewTest(TestCase):
+
+    def test_register_view_returns_200_status_code(self):
+        response = self.client.get(reverse('register'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_register_view_post_redirects_to_index(self):
+        data = {'username': 'testuser', 'email': 'testuser@test.com',
+                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': 'customer'}
+        response = self.client.post(reverse('register'), data=data)
+        self.assertRedirects(response, reverse('index'))
+
+    def test_register_view_registers_customer_user(self):
+        data = {'username': 'testuser', 'email': 'testuser@test.com',
+                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': 'customer'}
+        self.client.post(reverse('register'), data=data)
+        user = CustomUser.objects.get(username='testuser')
+        customer = Customer.objects.get(user=user)
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(customer)
+
+    def test_register_view_registers_driver_user(self):
+        data = {'username': 'testuser', 'email': 'testuser@test.com',
+                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': 'driver'}
+        self.client.post(reverse('register'), data=data)
+        user = CustomUser.objects.get(username='testuser')
+        driver = Driver.objects.get(user=user)
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(driver)
+
+    def test_register_view_invalid_form_shows_errors(self):
+        data = {'username': 'testuser', 'email': 'testuser@test.com',
+                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': ''}
+        response = self.client.post(reverse('register'), data=data)
+        self.assertContains(response, "This field is required")
 
 
 class CustomUserModelTest(TestCase):
@@ -101,27 +141,27 @@ class OrderModelTestCase(TestCase):
         self.user1 = CustomUser.objects.create_user(username="testuser1", password="testpass1")
         self.customer0 = Customer.objects.create(user=self.user0, saved_payment_info="1234 5678 9101 1121")
         self.customer1 = Customer.objects.create(user=self.user1, saved_payment_info="1234 5678 9101 1121")
-        
+
         # Create a user for the driver and assign it to a driver instance
         self.user2 = CustomUser.objects.create_user(username="testuser2", password="testpass2")
-        self.driver0 = Driver.objects.create(user=self.user2, is_available=True, latitude=35.12345, 
-                                              longitude=139.12345, license_number="123456", 
+        self.driver0 = Driver.objects.create(user=self.user2, is_available=True, latitude=35.12345,
+                                              longitude=139.12345, license_number="123456",
                                               bank_account_info="1234 5678 9101 1121")
         self.user3 = CustomUser.objects.create_user(username="testuser3", password="testpass3")
-        self.driver1 = Driver.objects.create(user=self.user3, is_available=True, latitude=35.12345, 
-                                              longitude=139.12345, license_number="123456", 
+        self.driver1 = Driver.objects.create(user=self.user3, is_available=True, latitude=35.12345,
+                                              longitude=139.12345, license_number="123456",
                                               bank_account_info="1234 5678 9101 1121")
-        
+
         # Create a car for the customer
         self.car0 = Car.objects.create(make="Toyota", model="Camry", year=2021, customer=self.customer0)
         self.car1 = Car.objects.create(make="Toyota", model="Camry", year=2021, customer=self.customer1)
-        
+
         # Create an order associated with the customer and car
-        self.order0 = Order.objects.create(customer=self.customer0, car=self.car0, 
+        self.order0 = Order.objects.create(customer=self.customer0, car=self.car0,
                                             pickup_latitude=35.12345, pickup_longitude=139.12345,
                                             dropoff_latitude=35.67890, dropoff_longitude=139.67890,
                                             pickup_time=timezone.now(), completed=False)
-        self.order1 = Order.objects.create(customer=self.customer1, car=self.car1, 
+        self.order1 = Order.objects.create(customer=self.customer1, car=self.car1,
                                             pickup_latitude=35.12345, pickup_longitude=139.12345,
                                             dropoff_latitude=35.67890, dropoff_longitude=139.67890,
                                             pickup_time=timezone.now(), completed=False)
@@ -149,7 +189,7 @@ class OrderModelTestCase(TestCase):
         self.user4 = CustomUser.objects.create_user(username="testuser4", password="testpass1")
         self.customer2 = Customer.objects.create(user=self.user4, saved_payment_info="1234 5678 9101 1121")
         self.car2 = Car.objects.create(make="Nissan", model="Altima", year=2022, customer=self.customer2)
-        self.order2 = Order.objects.create(customer=self.customer2, car=self.car2, 
+        self.order2 = Order.objects.create(customer=self.customer2, car=self.car2,
                                             pickup_latitude=35.12345, pickup_longitude=139.12345,
                                             dropoff_latitude=35.67890, dropoff_longitude=139.67890,
                                             pickup_time=timezone.now(), completed=False)
@@ -170,3 +210,17 @@ class OrderModelTestCase(TestCase):
         self.order0.assign_driver(self.driver0)
         self.order0.complete_order()
         self.assertEqual(self.order0.completed, True)
+    def tearDown(self):
+        # Delete all objects created in setUp
+        self.order0.delete()
+        self.order1.delete()
+        self.car0.delete()
+        self.car1.delete()
+        self.driver0.delete()
+        self.driver1.delete()
+        self.customer0.delete()
+        self.customer1.delete()
+        self.user0.delete()
+        self.user1.delete()
+        self.user2.delete()
+        self.user3.delete()
