@@ -23,7 +23,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Dependencies
       run: |
-        #apt install -y postgresql-client gdal-bin libgeos-dev libgdal-dev python3-psycopg2 graphviz-dev postgresql-contrib
+        apt install -y postgresql-client gdal-bin libgeos-dev libgdal-dev python3-psycopg2 graphviz-dev postgresql-contrib
         python -m pip install --upgrade pip
         pip install -r src/requirements.txt
     - name: Run Tests
