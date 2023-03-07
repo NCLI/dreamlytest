@@ -47,6 +47,8 @@ class Driver(models.Model):
     )
     license_number = models.CharField(max_length=50)
     bank_account_info = models.CharField(max_length=4096)
+    def __str__(self):
+        return self.user.username
 
 class Order(models.Model):
     """ A model to represent an order. """
@@ -91,6 +93,16 @@ class Order(models.Model):
                 raise ValidationError('A customer can only have one incomplete order at a time.')
         super().save(*args, **kwargs)
 
+    def complete_order(self):
+        self.completed = True
+        self.save()
+        return True
+
+
     def assign_driver(self, driver):
         self.driver = driver
+        self.save()
+
+    def unassign_driver(self):
+        self.driver = None
         self.save()
