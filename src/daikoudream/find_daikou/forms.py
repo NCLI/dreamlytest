@@ -17,7 +17,7 @@ User = get_user_model()
 class CustomUserForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email')
+        fields = ['first_name', 'last_name', 'email']
 
 class CustomerForm(forms.ModelForm):
     class Meta:
@@ -48,6 +48,10 @@ class DriverForm(forms.ModelForm):
             'latitude': forms.NumberInput(attrs={'class': 'form-control'}),
             'longitude': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.update(CustomUserForm(instance=self.instance.user).fields)
 
 class UserForm(forms.ModelForm):
     class Meta:

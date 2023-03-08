@@ -518,12 +518,13 @@ def modify_user(request: HttpRequest) -> Union[HttpResponse, JsonResponse]:
         user.email = request.POST.get('email', user.email)
         user.password = user.password
         user.username = user.username
-        user_obj.address = request.POST.get('address', user_obj.address)
-        user_obj.phone = request.POST.get('phone', user_obj.phone)
 
         if isinstance(user_obj, Driver):
             user_obj.latitude = request.POST.get('latitude', user_obj.latitude)
             user_obj.longitude = request.POST.get('longitude', user_obj.longitude)
+        else:
+            user_obj.address = request.POST.get('address', user_obj.address)
+            user_obj.phone = request.POST.get('phone', user_obj.phone)
 
         user_obj.save()
         user.save()
