@@ -473,36 +473,9 @@ def add_car(request: HttpRequest) -> HttpResponse:
     return render(request, 'add_car.html', {'form': form})
 
 @login_required
-def modify_car(request: HttpRequest, car_id: int) -> Union[HttpResponse, JsonResponse]:
-    """
-    View function that allows a user to modify a car in their profile.
-
-    Args:
-    - request: The HTTP request object.
-    - car_id: The ID of the car to be modified.
-
-    Returns:
-    - An HTTP response object that renders a template showing a form to modify a car, or
-    - A JSON response object with an error message if the user is not authorized to modify the car.
-    """
-    car = get_object_or_404(Car, id=car_id)
-    if car.customer.user == request.user:
-        if request.method == 'POST':
-            form = CarForm(request.POST, instance=car)
-            if form.is_valid():
-                form.save()
-                return redirect('index')
-        else:
-            form = CarForm(instance=car)
-        return render(request, 'modify_car.html', {'form': form})
-    return JsonResponse({'success': False, 'message': 'You are not authorized to modify this car.'})
-
-@login_required
 def modify_user(request: HttpRequest) -> Union[HttpResponse, JsonResponse]:
     """
     Allows a logged-in user to modify their account information.
-    If the user is a driver, updates their latitude, longitude, license number, and bank account information.
-    If the user is a customer, just updates their name and email.
     """
     user = request.user
     if request.method == 'POST':
