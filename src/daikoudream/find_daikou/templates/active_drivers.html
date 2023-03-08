@@ -61,6 +61,8 @@ navigator.geolocation.getCurrentPosition(function(position) {
               // Define the style function for the driver markers
               style: function(feature) {
                   var color;
+                  // Make the point of the driver assigned to the active order of a
+                  // logged in user viewing the map bigger, and a darker green.
                   if (feature.getProperties().is_assigned) {
                       color = 'green';
                       radius = 8;
@@ -94,7 +96,6 @@ navigator.geolocation.getCurrentPosition(function(position) {
             zoom: 10
         })
     });
-    // Handle the click event on the map to set the departure and arrival points
     {% if is_customer and not has_active_order %}
     // Declare default marker style
     var defaultStyle = new ol.style.Style({
@@ -123,6 +124,7 @@ navigator.geolocation.getCurrentPosition(function(position) {
       var feature = new ol.Feature({
         geometry: new ol.geom.Point(coordinate)
       });
+      // Set departure point if not set.
       if (!departure) {
           departure = lonLat;
           departureFeature = feature;
@@ -135,6 +137,7 @@ navigator.geolocation.getCurrentPosition(function(position) {
         }));
         vectorSource.addFeature(departureFeature);
       }
+      // Set arrival point if not set, while departure point IS set.
       else if (!arrival) {
           arrival = lonLat;
           arrivalFeature = feature;
@@ -148,7 +151,7 @@ navigator.geolocation.getCurrentPosition(function(position) {
           vectorSource.addFeature(arrivalFeature);
           // Add the confirm button
           var confirmBtn = document.getElementById('confirm-btn');
-          var selected_option = null;
+          var selectedOption = null;
           confirmBtn.disabled = false;
           confirmBtn.addEventListener('click', function() {
               // get the selected option element
@@ -289,7 +292,7 @@ navigator.geolocation.getCurrentPosition(function(position) {
     {% endif %}
 });
 </script>
-<!-- Buttons(which are links) are generated as a list by the view, and displayed here -->
+<!-- Buttons(which are links) are generated as a list by the view, and displayed here. -->
 {% if buttons %}
 <div class="btn-group" role="group" aria-label="Buttons">
 {% for button in buttons %}
