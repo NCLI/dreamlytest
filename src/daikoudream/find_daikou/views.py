@@ -1,41 +1,60 @@
 from typing import List, Dict, Any, Union, Optional
 
 from datetime import datetime, timedelta
-from time import strptime
 
 from django.http import JsonResponse, HttpResponseBadRequest, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
-from django.contrib import messages
 from django.contrib.gis.geos import Point
 from django.db import transaction
 from django.urls import reverse
-from django.views.decorators.http import require_POST
 from django.db.models.query import QuerySet
 
 from find_daikou.models import Driver, Order, Car
 from .forms import DriverForm, RegistrationForm, CarForm, CustomerForm
-from .models import CustomUser, Driver, Customer
+from .models import Driver, Customer
 
-def available_drivers(request):
+def available_drivers(request) -> JsonResponse:
+    """
+    Returns a JSON response containing a list of available drivers as GeoJSON points.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        JsonResponse: A JSON response containing a list of available drivers as GeoJSON points.
+    """
+
+    # Check if the user is authenticated
     if request.user.is_authenticated:
+        # Attempt to retrieve the current order and assigned driver, if any
         try:
             order = Order.objects.get(customer=request.user.customer, completed=False)
             assigned_driver = order.driver
         except Order.DoesNotExist:
-            pass
+            assigned_driver = None
+    else:
+        assigned_driver = None
 
+    # Retrieve all drivers that are currently available
     drivers = Driver.objects.filter(is_available=True)
-    driver_points = [{'type': 'Feature',
-                      'geometry': {'type': 'Point', 'coordinates': [d.latitude, d.longitude]},
-                      'properties': {'name': d.user.username, 'is_assigned': d == assigned_driver }} for d in drivers]
 
+    # Create a GeoJSON FeatureCollection of driver points
+    driver_points = [
+        {
+            'type': 'Feature',
+            'geometry': {'type': 'Point', 'coordinates': [d.latitude, d.longitude]},
+            'properties': {'name': d.user.username, 'is_assigned': d == assigned_driver }
+        } for d in drivers
+    ]
+
+    # Create a dictionary containing the GeoJSON FeatureCollection
     data = {
         'type': 'FeatureCollection',
         'features': driver_points
     }
 
+    # Return the response as a JSON object
     return JsonResponse(data)
 
 def register(request: HttpRequest) -> Union[HttpResponse, HttpResponseRedirect]:
