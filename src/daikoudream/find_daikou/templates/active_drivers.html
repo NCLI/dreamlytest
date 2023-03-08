@@ -148,6 +148,7 @@ navigator.geolocation.getCurrentPosition(function(position) {
           vectorSource.addFeature(arrivalFeature);
           // Add the confirm button
           var confirmBtn = document.getElementById('confirm-btn');
+          var selected_option = null;
           confirmBtn.disabled = false;
           confirmBtn.addEventListener('click', function() {
               // get the selected option element
@@ -158,7 +159,6 @@ navigator.geolocation.getCurrentPosition(function(position) {
               var selectedCarId = selectedOption.value;
 
               // Show pop-up to confirm selection
-
               var dateTimePicker = document.getElementById('pickup-time')
               var time = dateTimePicker.value;
               if (confirm('Confirm selection of departure: ' + departure + ' and arrival: ' + arrival + '?\n\n')) {
