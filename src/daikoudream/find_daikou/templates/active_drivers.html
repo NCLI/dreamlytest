@@ -2,6 +2,7 @@
 
 {% block extra_head %}
 {% load static %}
+<!-- Load the OpenLayers module. We use a local copy. -->
 <script src="{% static 'js/ol.js' %}"></script>
 {% endblock %}
 
@@ -161,8 +162,13 @@ navigator.geolocation.getCurrentPosition(function(position) {
               var dateTimePicker = document.getElementById('pickup-time')
               var time = dateTimePicker.value;
               if (confirm('Confirm selection of departure: ' + departure + ' and arrival: ' + arrival + '?\n\n')) {
-                  // Send coordinates to call_driver
-                  window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival + "&time=" + time + "&car=" + selectedCarId;
+                  if (selectedCatId != null) {
+                      // Send coordinates to call_driver
+                      window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival + "&time=" + time + "&car=" + selectedCarId;
+                  }
+                  else {
+                      alert("Please add a car to your account before proceeding.");
+                  }
               }
               else {
                   // Unset variables and remove markers
@@ -283,10 +289,11 @@ navigator.geolocation.getCurrentPosition(function(position) {
     {% endif %}
 });
 </script>
+<!-- Buttons(which are links) are generated as a list by the view, and displayed here -->
 {% if buttons %}
-<div class="btn-group" role="group" aria-label="Basic example">
+<div class="btn-group" role="group" aria-label="Buttons">
 {% for button in buttons %}
-<a href="{{ button.url }}" class="btn btn-primary" {% if button.disabled %}disabled{% endif %}>{{ button.label }}</a>
+<a href="{{ button.url }}" class="btn btn-primary" >{{ button.label }}</a>
 {% endfor %}
 </div>
 {% else %}
@@ -307,6 +314,7 @@ navigator.geolocation.getCurrentPosition(function(position) {
 </ul>
 {% endif %}
 
+<!-- Display cars associated to customer only if customer has no active orders. -->
 {% if is_customer and not has_active_order %}
     <select name="car">
         {% for car in cars %}

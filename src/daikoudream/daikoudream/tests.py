@@ -10,7 +10,6 @@ from find_daikou.forms import RegistrationForm
 from find_daikou.views import index
 
 class RegisterViewTest(TestCase):
-
     def test_register_view_returns_200_status_code(self):
         response = self.client.get(reverse('register'))
         self.assertEqual(response.status_code, 200)
