@@ -17,7 +17,7 @@ class Customer(models.Model):
         related_name='customer'
     )
     def __str__(self):
-        return f"{self.user.name}"
+        return f"{self.user.first_name} {self.user.last_name}"
 
 class Car(models.Model):
     """ A model to represent a car. """
