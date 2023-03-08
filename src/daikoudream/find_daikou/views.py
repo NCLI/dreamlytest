@@ -517,6 +517,7 @@ def modify_user(request: HttpRequest) -> Union[HttpResponse, JsonResponse]:
         user.last_name = request.POST.get('last_name', user.last_name)
         user.email = request.POST.get('email', user.email)
         user.password = user.password
+        user.username = user.username
         user_obj.address = request.POST.get('address', user_obj.address)
         user_obj.phone = request.POST.get('phone', user_obj.phone)
 
