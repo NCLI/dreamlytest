@@ -28,7 +28,6 @@ urlpatterns = [
     path('add_car/', views.add_car, name='add_car'),
     path('modify_user/', views.modify_user, name='modify_user'),
     path('history/', views.history, name='history'),
-    # path('open_orders', views.open_orders, name='open_orders'),
     path('set_driver_available/', views.set_driver_available, name='set_driver_available'),
     path('set_driver_unavailable/', views.set_driver_unavailable, name='set_driver_unavailable'),
     path('cancel_order/', views.cancel_order, name='cancel_order'),
