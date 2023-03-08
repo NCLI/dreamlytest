@@ -17,13 +17,13 @@ class RegisterViewTest(TestCase):
 
     def test_register_view_post_redirects_to_index(self):
         data = {'username': 'testuser', 'email': 'testuser@test.com',
-                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': 'customer'}
+                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': 'customer', 'phone': "42", "address": "Paradisaeblevej 111"}
         response = self.client.post(reverse('register'), data=data)
         self.assertRedirects(response, reverse('index'))
 
     def test_register_view_registers_customer_user(self):
         data = {'username': 'testuser', 'email': 'testuser@test.com',
-                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': 'customer'}
+                'password1': 'testpassword', 'password2': 'testpassword', 'user_type': 'customer', 'phone': "42", "address": "Paradisaeblevej 111"}
         self.client.post(reverse('register'), data=data)
         user = CustomUser.objects.get(username='testuser')
         customer = Customer.objects.get(user=user)
