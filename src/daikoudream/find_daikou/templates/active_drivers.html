@@ -151,21 +151,25 @@ navigator.geolocation.getCurrentPosition(function(position) {
           vectorSource.addFeature(arrivalFeature);
           // Add the confirm button
           var confirmBtn = document.getElementById('confirm-btn');
-          var selectedOption = null;
           confirmBtn.disabled = false;
           confirmBtn.addEventListener('click', function() {
               // get the selected option element
               var car = document.getElementsByName('car')[0];
-              var selectedOption = car.options[car.selectedIndex];
-
-              // get the value of the selected option
-              var selectedCarId = selectedOption.value;
+              // ...if the customer has any cars assigned.
+              if (car.options.length > 0) {
+                  var selectedOption = car.options[car.selectedIndex];
+                  // get the value of the selected option
+                  var selectedCarId = selectedOption.value;
+              }
+              else {
+                  var selectedCarId = null;
+              }
 
               // Show pop-up to confirm selection
               var dateTimePicker = document.getElementById('pickup-time')
               var time = dateTimePicker.value;
               if (confirm('Confirm selection of departure: ' + departure + ' and arrival: ' + arrival + '?\n\n')) {
-                  if (selectedCatId != null) {
+                  if (selectedCarId != null) {
                       // Send coordinates to call_driver
                       window.location.href = "{% url 'call_driver' %}?departure=" + departure + "&arrival=" + arrival + "&time=" + time + "&car=" + selectedCarId;
                   }
