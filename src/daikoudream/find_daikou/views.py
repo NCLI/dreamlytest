@@ -513,9 +513,9 @@ def modify_user(request: HttpRequest) -> Union[HttpResponse, JsonResponse]:
         else:
             return JsonResponse({'success': False, 'message': 'User is not a driver or customer.'})
 
-        user.first_name = request.POST.get('first_name', user_obj.first_name)
-        user.last_name = request.POST.get('last_name', user_obj.last_name)
-        user.email = request.POST.get('email', user_obj.email)
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
         user.password = request.POST.get('password')
         user_obj.address = request.POST.get('address', user_obj.address)
         user_obj.phone = request.POST.get('phone', user_obj.phone)
